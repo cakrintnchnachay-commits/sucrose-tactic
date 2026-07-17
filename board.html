@@ -331,9 +331,10 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
     <a class="back" href="index.html" title="Back to app" data-icon="back"></a>
     <div class="tb-title">
       <h1>TACTIC <span class="accent">BOARD</span></h1>
-      <span class="tb-sub">Project Sucrose · v2.0</span>
+      <span class="tb-sub" id="orgLabel">Sucrose Tactic · beta</span>
     </div>
     <div class="tb-actions">
+      <button class="btn btn-sm desktop-only" id="btnLogout" onclick="doLogout()" style="display:none;">Log out</button>
       <button class="btn btn-sm desktop-only" onclick="exportPNG()" title="Export the current step as a PNG image">Export PNG</button>
       <button class="btn btn-sm btn-primary" id="btnSave" onclick="openSave()" title="Save scenario (Ctrl+S)">Save</button>
       <button class="icon-btn" onclick="startTour()" title="Show the quick tour" data-icon="help"></button>
@@ -519,6 +520,26 @@ async function requireSession(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session){ toast('Sign in to save and load — this beta is invite-only.',true); return null; }
   return session;
+}
+
+// On boot: no session → back to the sign-in page. With one → greet the
+// user's org in the topbar (org name comes through RLS, so a member can
+// only ever see their own org).
+async function initAuth(){
+  if(!sb){ location.replace('index.html'); return; }
+  const {data:{session}}=await sb.auth.getSession();
+  if(!session){ location.replace('index.html'); return; }
+  $('btnLogout').style.display='';
+  try{
+    const {data}=await sb.from('org_members').select('orgs(name)').eq('user_id',session.user.id).single();
+    if(data&&data.orgs&&data.orgs.name) $('orgLabel').textContent=data.orgs.name+' · beta';
+  }catch(e){ console.warn('org lookup failed',e); }
+}
+async function doLogout(){
+  if(dirty&&!confirm('You have unsaved changes — log out anyway?'))return;
+  dirty=false;
+  if(sb)await sb.auth.signOut();
+  location.replace('index.html');
 }
 
 // Hero portraits come from Cloudinary (same source as the main app), so no
@@ -2308,6 +2329,7 @@ function setupCalibration(){
   setTool('move');
   renderAll();
   layoutMap();
+  initAuth();
   loadData();
   checkOfflineSaves();
   loadVisionSettings();

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!-- SUCROSE TACTIC (closed beta) — index.html: sign-in page.
+     Phase 2 version: minimal login box in the site's visual language.
+     Phase 4 replaces the hero section with the full Thai-first pitch
+     page + beta-team logo wall. -->
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="theme-color" content="#0b0b0d"/>
+<title>Sucrose Tactic — Closed Beta</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{
+  --bg:#0b0b0d; --panel:#141416; --ink:#f4f4f0; --mut:#8a8a90;
+  --line:#26262a; --accent:#44ff88; --red:#FF4444;
+}
+*{box-sizing:border-box;}
+html,body{height:100%;margin:0;}
+body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:14px;
+  display:flex;align-items:center;justify-content:center;padding:20px;}
+.card{width:min(400px,94vw);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:34px 30px;}
+h1{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:3px;margin:0 0 2px;line-height:1;}
+h1 .accent{color:var(--accent);}
+.sub{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--mut);margin-bottom:26px;}
+label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mut);display:block;margin-bottom:8px;}
+input[type=email]{width:100%;padding:12px 13px;background:var(--bg);border:1px solid var(--line);border-radius:3px;
+  color:var(--ink);font-family:'DM Mono',monospace;font-size:13px;outline:none;}
+input[type=email]:focus{border-color:var(--mut);}
+button{width:100%;margin-top:14px;padding:12px;border:none;border-radius:3px;background:var(--ink);color:var(--bg);
+  font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;}
+button:hover{background:#cfcfc9;}
+button:disabled{opacity:.5;cursor:default;}
+.msg{margin-top:16px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.6;color:var(--mut);min-height:18px;}
+.msg.ok{color:var(--accent);}
+.msg.err{color:#ffb3b3;}
+.msg a{color:var(--ink);}
+.foot{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--mut);line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>SUCROSE <span class="accent">TACTIC</span></h1>
+  <div class="sub">Tactic board · closed beta</div>
+  <form id="loginForm">
+    <label for="email">Email</label>
+    <input type="email" id="email" autocomplete="email" placeholder="you@team.gg" required/>
+    <button type="submit" id="goBtn">Send sign-in link</button>
+  </form>
+  <div class="msg" id="msg"></div>
+  <div class="foot">Invite-only during the beta. A sign-in link is emailed to you — no password needed.<br>
+  ทดสอบแบบปิด — ลิงก์เข้าสู่ระบบจะถูกส่งไปที่อีเมลของคุณ</div>
+</div>
+
+<script>
+'use strict';
+const SUPABASE_URL='https://nauthibrxazwiywosmjz.supabase.co';
+const SUPABASE_KEY='sb_publishable_E5maB4TefGpEDkLh_Z6MWQ_JNO9h4H1';
+const sb=window.supabase?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+const $=id=>document.getElementById(id);
+const CONTACT='cakrintnchnachay@gmail.com';
+
+function say(text,cls){ const m=$('msg'); m.className='msg '+(cls||''); m.innerHTML=text; }
+
+// A magic link that failed (expired/used) comes back as #error=...&error_description=...
+function checkLinkError(){
+  const h=new URLSearchParams(location.hash.replace(/^#/,''));
+  if(h.get('error')){
+    say('That sign-in link has expired or was already used — enter your email to get a fresh one.','err');
+    history.replaceState(null,'',location.pathname);
+    return true;
+  }
+  return false;
+}
+
+async function boot(){
+  if(!sb){ say('Could not load the sign-in library — check your connection.','err'); return; }
+  const hadErr=checkLinkError();
+  // A successful magic link lands here with a session in the URL; the client
+  // stores it, then we hand over to the board.
+  const {data:{session}}=await sb.auth.getSession();
+  if(session && !hadErr){ location.replace('board.html'); return; }
+
+  $('loginForm').addEventListener('submit',async e=>{
+    e.preventDefault();
+    const email=$('email').value.trim();
+    if(!email)return;
+    $('goBtn').disabled=true;
+    say('Sending…');
+    // shouldCreateUser:false — unknown emails are refused instead of being
+    // signed up. (Signups are also disabled server-side in the dashboard.)
+    const {error}=await sb.auth.signInWithOtp({
+      email,
+      options:{shouldCreateUser:false, emailRedirectTo:location.origin+location.pathname}
+    });
+    $('goBtn').disabled=false;
+    if(error){
+      if(/signup|not allowed|disabled|not found/i.test(error.message)){
+        say('This beta is invite-only and that email isn’t on the list.<br>'+
+            'Want in? <a href="mailto:'+CONTACT+'?subject=Sucrose%20Tactic%20beta">Email us</a>.','err');
+      }else{
+        say('Could not send the link: '+error.message.replace(/</g,'&lt;'),'err');
+      }
+      return;
+    }
+    say('Check your email — the sign-in link is on its way. You can close this tab.','ok');
+  });
+}
+boot();
+</script>
+</body>
+</html>
