@@ -11,9 +11,13 @@
     - Multi-step plays (frames) with animated playback
     - Arrow / zone drawing tools with select-and-edit, plus the freehand pen
     - Ward markers with toggleable vision-range circles
+    - Vision mode: sight circles on every hero token and standing tower;
+      radii editable in the Board sheet and synced across devices (Supabase)
     - Notes saved with each scenario
     - Zoom controls + drag-to-pan for small screens
     - Unified undo/redo across pen strokes and shapes
+    - Desktop: Heroes and Board share one collapsible, tabbed sidebar
+      (imported from the Claude Design project); phones keep bottom sheets
   v1 saved scenarios still load (see applyBoardState).
   Tower positions live in TOWER_POSITIONS so they are easy to nudge later.
 -->
@@ -21,9 +25,13 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
-<meta name="theme-color" content="#080808"/>
+<meta name="theme-color" content="#0b0b0d"/>
 <title>Tactic Board — Sucrose</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<!-- Shared site chrome. Loaded BEFORE the inline <style> on purpose: nav.css
+     defines its own :root --black/--white, and this page's palette must win. -->
+<link rel="stylesheet" href="nav.css">
 
 <!-- Supabase library (same CDN version index.html uses) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -34,11 +42,16 @@
    like the rest of the site (home dashboard).
    ───────────────────────────────────────────── */
 :root{
-  --black:#080808; --white:#f4f4f0;
-  --grey-1:#141414; --grey-2:#1e1e1e; --grey-3:#2a2a2a; --grey-4:#444; --grey-5:#888; --grey-6:#bbb;
+  --bg:#0b0b0d; --panel:#141417; --panel2:#1c1c21; --raise:#232329; --line:#26262c; --line2:#333339;
+  --ink:#f2f2ee; --ink2:#c9c9d0; --mut:#8b8b95; --mut2:#5c5c66;
   --blue:#4488FF; --red:#FF4444; --accent:#44ff88; --warn:#ffcc44;
   --tower-blue:#64B5F6; --tower-red:#FF7043;
-  --border:1px solid #2a2a2a;
+  --border:1px solid var(--line);
+  --sbw:300px;
+  /* Legacy token names kept as aliases so existing rules (vision, tour,
+     load modal, offline banner) pick up the new palette untouched. */
+  --black:var(--bg); --white:var(--ink);
+  --grey-1:var(--panel); --grey-2:var(--panel2); --grey-3:var(--line); --grey-4:var(--line2); --grey-5:var(--mut); --grey-6:var(--ink2);
   /* Dragon recolor: source art is purple — this pushes it to yellow/gold. */
   --dragon-filter: hue-rotate(150deg) saturate(1.6) brightness(1.15);
 }
@@ -124,6 +137,12 @@ body.hide-names .token .lbl{display:none;}
 #selPill .btn{background:rgba(8,8,8,.9);}
 
 /* ─────────── Sheets (mobile) / Panels (desktop) ─────────── */
+/* ── Sidebar (desktop): tabbed + collapsible ── */
+#sidebar{display:flex;flex-direction:column;min-height:0;flex:0 0 auto;}
+#sbTabs{display:flex;gap:4px;padding:10px 12px 0;}
+.sbtab{flex:1;padding:8px 0;border:none;background:none;color:var(--mut);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.4px;cursor:pointer;border-radius:8px;transition:all .15s;}
+.sbtab:hover{color:var(--ink);}
+.sbtab.active{background:var(--panel2);color:var(--ink);}
 .sheet{background:var(--grey-1);display:flex;flex-direction:column;min-height:0;}
 .sheet-head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:var(--border);flex:0 0 auto;position:relative;}
 .sheet-head .ttl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--grey-6);}
@@ -133,14 +152,20 @@ body.hide-names .token .lbl{display:none;}
 #backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1400;opacity:0;pointer-events:none;transition:opacity .2s;}
 #backdrop.show{opacity:1;pointer-events:auto;}
 @media(max-width:899px){
+  #sbTabs{display:none;}
+  #sidebar{display:contents;}
   .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1500;border-top:var(--border);border-radius:14px 14px 0 0;max-height:68vh;max-height:68dvh;transform:translateY(103%);transition:transform .24s ease;box-shadow:0 -12px 40px rgba(0,0,0,.55);}
   .sheet.open{transform:translateY(0);}
   .sheet-head{padding-top:16px;}
   .desktop-only{display:none!important;}
 }
 @media(min-width:900px){
-  .sheet{width:270px;flex:0 0 auto;border-right:var(--border);}
-  #sheetBoard{border-right:none;border-left:var(--border);}
+  #sidebar{width:var(--sbw);border-right:var(--border);background:var(--panel);transition:width .22s ease,opacity .18s;overflow:hidden;}
+  body.sb-collapsed #sidebar{width:0;opacity:0;border-right:none;}
+  #sidebar .sheet{display:none;flex:1 1 auto;background:none;width:var(--sbw);}
+  #sidebar[data-tab="heroes"] #sheetHeroes{display:flex;}
+  #sidebar[data-tab="board"] #sheetBoard{display:flex;}
+  .sheet-head{display:none;}
   .mobile-only{display:none!important;}
   #backdrop{display:none!important;}
 }
@@ -210,8 +235,9 @@ body.hide-names .token .lbl{display:none;}
 .fs-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--grey-5);flex:0 0 auto;}
 #frameChips{display:flex;gap:6px;overflow-x:auto;flex:1 1 auto;padding:2px 0;scrollbar-width:none;}
 #frameChips::-webkit-scrollbar{display:none;}
-.f-chip{min-width:32px;height:30px;border-radius:15px;border:var(--border);background:none;color:var(--grey-5);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;flex:0 0 auto;transition:all .12s;padding:0 10px;}
+.f-chip{min-width:32px;height:30px;border-radius:15px;border:var(--border);background:none;color:var(--grey-5);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;flex:0 0 auto;transition:all .12s;padding:0 10px;touch-action:manipulation;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;}
 .f-chip.on{border-color:var(--accent);color:var(--accent);background:rgba(68,255,136,.07);}
+.token.ghost{opacity:.25;pointer-events:none;}
 #btnPlay.playing{border-color:var(--accent);color:var(--accent);}
 
 /* ─────────── Context bar + toolbar ─────────── */
@@ -265,14 +291,36 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
 .scenario-card .cap .nmm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .scenario-card .cap .del{color:var(--grey-5);cursor:pointer;flex:0 0 auto;padding:2px 4px;}
 .scenario-card .cap .del:hover{color:var(--red);}
+.scenario-card .cap.sub{padding-top:0;color:var(--grey-5);font-size:9px;}
+.scenario-card .tag-badge{display:inline-block;background:var(--grey-3);color:var(--grey-6);border-radius:2px;padding:1px 5px;margin-right:4px;font-size:8px;letter-spacing:.5px;}
+.tag-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.tag-chip{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.5px;text-transform:uppercase;padding:5px 10px;border:var(--border);border-radius:999px;background:none;color:var(--grey-6);cursor:pointer;}
+.tag-chip.on{border-color:var(--accent);color:var(--accent);}
 .import-list{display:flex;flex-direction:column;gap:2px;}
 .import-row{display:flex;align-items:center;gap:10px;padding:11px 10px;border:var(--border);border-radius:3px;cursor:pointer;font-family:'DM Mono',monospace;font-size:11px;}
 .import-row:hover{background:var(--grey-2);border-color:var(--accent);}
 .import-row .date{color:var(--grey-5);font-size:10px;width:80px;flex:0 0 auto;}
 .import-row .vs{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .import-row .gm{color:var(--grey-5);font-size:9px;flex:0 0 auto;}
-.toast{position:fixed;bottom:calc(118px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--grey-2);border:var(--border);border-radius:4px;padding:10px 16px;font-family:'DM Mono',monospace;font-size:10px;z-index:4000;box-shadow:0 6px 24px rgba(0,0,0,.5);max-width:92vw;text-align:center;}
+.toast{position:fixed;bottom:calc(118px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);background:var(--grey-2);border:var(--border);border-radius:4px;padding:10px 16px;font-family:'DM Mono',monospace;font-size:10px;z-index:4000;box-shadow:0 6px 24px rgba(0,0,0,.5);max-width:92vw;text-align:center;display:flex;align-items:center;justify-content:center;gap:12px;}
 .toast.err{border-color:var(--red);color:#ffb3b3;}
+.toast-action{flex:0 0 auto;background:var(--accent);color:#0a0a0a;border:none;border-radius:2px;padding:5px 10px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;}
+
+#tourBg{position:fixed;inset:0;background:transparent;z-index:4999;display:none;}
+#tourBg.on{display:block;}
+#tourBg.on.dim{background:rgba(0,0,0,.72);}
+#tourSpot{position:fixed;z-index:5000;display:none;border:2px solid var(--accent);border-radius:8px;box-shadow:0 0 0 9999px rgba(0,0,0,.72);pointer-events:none;transition:top .22s ease,left .22s ease,width .22s ease,height .22s ease;}
+#tourSpot.on{display:block;}
+.tour-card{position:fixed;z-index:5001;background:var(--grey-1);border:1px solid var(--accent);border-radius:6px;padding:16px;width:min(280px,calc(100vw - 32px));box-sizing:border-box;box-shadow:0 10px 40px rgba(0,0,0,.7);font-family:'DM Mono',monospace;}
+.tour-card .tt{font-size:13px;color:var(--white);margin-bottom:6px;letter-spacing:.3px;}
+.tour-card .bd{font-size:11px;color:var(--grey-6);line-height:1.5;margin-bottom:14px;}
+.tour-card .ft{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.tour-card .dots{display:flex;gap:5px;}
+.tour-card .dot{width:6px;height:6px;border-radius:50%;background:var(--grey-4);}
+.tour-card .dot.on{background:var(--accent);}
+.tour-card .btns{display:flex;gap:8px;}
+.tour-card button{background:var(--accent);color:#0a0a0a;border:none;border-radius:2px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;}
+.tour-card button.skip{background:none;color:var(--grey-5);padding:6px 4px;}
 </style>
 </head>
 <body class="tool-move">
@@ -286,14 +334,26 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
       <span class="tb-sub">Project Sucrose · v2.0</span>
     </div>
     <div class="tb-actions">
-      <button class="btn btn-sm btn-primary" onclick="openSave()" title="Save scenario (Ctrl+S)">Save</button>
+      <button class="btn btn-sm desktop-only" onclick="exportPNG()" title="Export the current step as a PNG image">Export PNG</button>
+      <button class="btn btn-sm btn-primary" id="btnSave" onclick="openSave()" title="Save scenario (Ctrl+S)">Save</button>
+      <button class="icon-btn" onclick="startTour()" title="Show the quick tour" data-icon="help"></button>
+      <button class="icon-btn desktop-only" id="sbToggle" onclick="toggleSidebar()" title="Hide the side panel"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5L7 10l5.5 5.5"/><path d="M4 4v12" stroke-opacity=".45"/></svg></button>
       <button class="icon-btn mobile-only" onclick="openSheet('sheetBoard')" title="Board menu" data-icon="menu"></button>
     </div>
   </header>
 
   <div id="mid">
 
-    <!-- HEROES — bottom sheet on mobile, left panel on desktop -->
+    <!-- SIDEBAR — one tabbed, collapsible panel on desktop.
+         On mobile `#sidebar{display:contents}` dissolves it so both
+         sheets stay independent bottom sheets exactly as before. -->
+    <div id="sidebar" data-tab="heroes">
+      <div id="sbTabs" class="desktop-only">
+        <button class="sbtab active" data-tab="heroes">Heroes</button>
+        <button class="sbtab" data-tab="board">Board</button>
+      </div>
+
+    <!-- HEROES — bottom sheet on mobile, sidebar tab on desktop -->
     <aside class="sheet" id="sheetHeroes">
       <div class="sheet-head">
         <span class="grip mobile-only"></span>
@@ -311,6 +371,76 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
         <div class="bench-row red"><span class="side-lbl">Red</span><div class="bench-tokens" id="benchRed"></div></div>
       </div>
     </aside>
+
+    <!-- BOARD — bottom sheet on mobile, sidebar tab on desktop -->
+    <aside class="sheet" id="sheetBoard">
+      <div class="sheet-head">
+        <span class="grip mobile-only"></span>
+        <span class="ttl">Board</span>
+        <button class="icon-btn x mobile-only" onclick="closeSheets()" data-icon="close"></button>
+      </div>
+      <div class="sheet-body">
+        <div class="board-actions">
+          <button class="btn btn-sm" onclick="openLoad()">Load</button>
+          <button class="btn btn-sm" onclick="exportPNG()">Export PNG</button>
+        </div>
+        <div class="section-label">Notes <span class="sub">saved with the scenario</span></div>
+        <textarea id="notesBox" class="notes" placeholder="Play notes — win condition, timings, who starts the engage…"></textarea>
+        <div class="section-label">Objectives</div>
+        <div class="obj-toggles">
+          <button class="toggle-btn on" id="tglDragon" onclick="toggleObjective('dragon')"><span class="dot"></span>Dragon</button>
+          <button class="toggle-btn on" id="tglSlayer" onclick="toggleObjective('slayer')"><span class="dot"></span>Slayer</button>
+        </div>
+        <div class="section-label">Place on map <span class="sub">tap, then tap the map</span></div>
+        <div class="src-grid">
+          <button class="src wblue" data-place="ward:blue"><span class="vis" data-icon="ward"></span>Blue ward</button>
+          <button class="src wred" data-place="ward:red"><span class="vis" data-icon="ward"></span>Red ward</button>
+          <button class="src" data-place="summon:vanguard"><span class="vis" id="vgVis"></span>Vanguard</button>
+          <button class="src" data-place="summon:darkslayer"><span class="vis" id="dsVis"></span>Darkslayer</button>
+        </div>
+        <div class="section-label">Vision ranges <span class="sub">% of map side &middot; synced to all devices</span></div>
+        <div class="size-row">
+          <label>Hero</label>
+          <div class="rr"><input type="range" id="visHero" min="50" max="200" oninput="setVisionR('hero',this.value)"/><span class="val" id="visHeroVal"></span></div>
+        </div>
+        <div class="size-row">
+          <label>Tower</label>
+          <div class="rr"><input type="range" id="visTower" min="50" max="200" oninput="setVisionR('tower',this.value)"/><span class="val" id="visTowerVal"></span></div>
+        </div>
+        <div class="size-row">
+          <label>Ward</label>
+          <div class="rr"><input type="range" id="visWard" min="50" max="200" oninput="setVisionR('ward',this.value)"/><span class="val" id="visWardVal"></span></div>
+        </div>
+        <div class="size-row">
+          <div class="rr">
+            <button class="btn btn-sm" onclick="resetVisionR()">Reset defaults</button>
+            <span class="val" id="visSyncState"></span>
+          </div>
+        </div>
+        <div class="section-label">Display</div>
+        <div class="size-row">
+          <label>Token size</label>
+          <div class="rr">
+            <input type="range" id="tokSize" min="24" max="80" value="42" oninput="setTokenSize(this.value)"/>
+            <span class="val" id="tokSizeVal">42px</span>
+          </div>
+        </div>
+        <div class="size-row">
+          <div class="rr">
+            <button class="toggle-btn on" id="tglNames" onclick="toggleNames()"><span class="dot"></span>Hero names</button>
+          </div>
+        </div>
+        <div class="size-row">
+          <div class="rr">
+            <button class="toggle-btn" id="tglOnion" onclick="toggleOnionSkin()" title="Ghost the previous step's hero positions so you can see what moved"><span class="dot"></span>Onion skin</button>
+          </div>
+        </div>
+        <div class="section-label">Towers <span class="sub">tap a lane name to toggle the row</span></div>
+        <div id="towersWrap"></div>
+      </div>
+    </aside>
+    </div><!-- /#sidebar -->
+
 
     <!-- CENTER: MAP -->
     <main id="mapWrap">
@@ -330,48 +460,6 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
       </div>
     </main>
 
-    <!-- BOARD — bottom sheet on mobile, right panel on desktop -->
-    <aside class="sheet" id="sheetBoard">
-      <div class="sheet-head">
-        <span class="grip mobile-only"></span>
-        <span class="ttl">Board</span>
-        <button class="icon-btn x mobile-only" onclick="closeSheets()" data-icon="close"></button>
-      </div>
-      <div class="sheet-body">
-        <div class="board-actions">
-          <button class="btn btn-sm" onclick="openLoad()">Load</button>
-        </div>
-        <div class="section-label">Notes <span class="sub">saved with the scenario</span></div>
-        <textarea id="notesBox" class="notes" placeholder="Play notes — win condition, timings, who starts the engage…"></textarea>
-        <div class="section-label">Objectives</div>
-        <div class="obj-toggles">
-          <button class="toggle-btn on" id="tglDragon" onclick="toggleObjective('dragon')"><span class="dot"></span>Dragon</button>
-          <button class="toggle-btn on" id="tglSlayer" onclick="toggleObjective('slayer')"><span class="dot"></span>Slayer</button>
-        </div>
-        <div class="section-label">Place on map <span class="sub">tap, then tap the map</span></div>
-        <div class="src-grid">
-          <button class="src wblue" data-place="ward:blue"><span class="vis" data-icon="ward"></span>Blue ward</button>
-          <button class="src wred" data-place="ward:red"><span class="vis" data-icon="ward"></span>Red ward</button>
-          <button class="src" data-place="summon:vanguard"><span class="vis" id="vgVis"></span>Vanguard</button>
-          <button class="src" data-place="summon:darkslayer"><span class="vis" id="dsVis"></span>Darkslayer</button>
-        </div>
-        <div class="section-label">Display</div>
-        <div class="size-row">
-          <label>Token size</label>
-          <div class="rr">
-            <input type="range" id="tokSize" min="24" max="80" value="42" oninput="setTokenSize(this.value)"/>
-            <span class="val" id="tokSizeVal">42px</span>
-          </div>
-        </div>
-        <div class="size-row">
-          <div class="rr">
-            <button class="toggle-btn on" id="tglNames" onclick="toggleNames()"><span class="dot"></span>Hero names</button>
-          </div>
-        </div>
-        <div class="section-label">Towers <span class="sub">tap a lane name to toggle the row</span></div>
-        <div id="towersWrap"></div>
-      </div>
-    </aside>
   </div>
 
   <!-- STEP STRIP -->
@@ -397,6 +485,8 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
     <button class="tool-btn" data-tool="zone" data-icon="zone" title="Drag a zone (Z)"><span>Zone</span></button>
     <button class="tool-btn" data-tool="erase" data-icon="erase" title="Erase pen strokes (E)"><span>Erase</span></button>
     <span class="sep"></span>
+    <button class="tool-btn" id="btnVisionBlue" onclick="toggleVision('blue')" data-icon="ward" title="Show blue hero &amp; tower sight ranges"><span>Vis. Blue</span></button>
+    <button class="tool-btn" id="btnVisionRed" onclick="toggleVision('red')" data-icon="ward" title="Show red hero &amp; tower sight ranges"><span>Vis. Red</span></button>
     <button class="tool-btn" onclick="doUndo()" data-icon="undo" title="Undo (Ctrl+Z)"><span>Undo</span></button>
     <button class="tool-btn" onclick="doRedo()" data-icon="redo" title="Redo (Ctrl+Shift+Z)"><span>Redo</span></button>
     <span class="spacer"></span>
@@ -404,6 +494,9 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
   </nav>
 </div>
 <div id="backdrop" onclick="closeSheets()"></div>
+<div id="tourBg" onclick="tourSkip()"></div>
+<div id="tourSpot"></div>
+<div class="tour-card" id="tourCard" style="display:none;" onclick="event.stopPropagation()"></div>
 
 <script>
 'use strict';
@@ -411,8 +504,10 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
 //  CONSTANTS
 // ════════════════════════════════════════════════════════════════
 
-// Supabase — the beta's own project. The anon key is public by design;
-// row-level security on the server decides what it can actually read.
+// Supabase — the beta's own project. The publishable key is public by
+// design; row-level security on the server decides what it can read.
+// Sessions ARE persisted here (unlike the private board): the beta uses
+// real magic-link login, and this client must pick the session up.
 const SUPABASE_URL='https://nauthibrxazwiywosmjz.supabase.co';
 const SUPABASE_KEY='sb_publishable_E5maB4TefGpEDkLh_Z6MWQ_JNO9h4H1';
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY) : null;
@@ -500,14 +595,16 @@ const MOVE_MS=700, PAUSE_MS=450;       // playback timing per step
 //  the map, every click prints its coordinates, and pressing 1/2/3/4
 //  moves the matching corner to the last click (new values are logged).
 // ════════════════════════════════════════════════════════════════
-// Fitted numerically so the hand-tuned TOWER_POSITIONS obey in-game
-// geometry (point symmetry, mid towers on the diagonal, side lanes at a
-// fixed offset from their wall) — see PR notes. Refine with ?cal=1.
+// Refit 2026-07 by least squares against all 18 tower icons extracted from
+// an in-game minimap screenshot (the minimap is the true flat arena, so the
+// icons give ground-truth world coordinates; blue/red pairs mirror to within
+// ±0.01, confirming the extraction). Mean art-position error dropped from
+// 1.10% to 0.78% of the image. Refine further with ?cal=1.
 const ARENA_CORNERS=[
-  {x:0.2266,y:0.0809},   // 1 · TL
-  {x:0.7845,y:0.0774},   // 2 · TR (red base corner)
-  {x:0.9738,y:0.9261},   // 3 · BR
-  {x:0.0812,y:0.9347},   // 4 · BL (blue base corner)
+  {x:0.2437,y:0.0855},   // 1 · TL
+  {x:0.7816,y:0.0787},   // 2 · TR (red base corner)
+  {x:0.9514,y:0.9298},   // 3 · BR
+  {x:0.0946,y:0.9208},   // 4 · BL (blue base corner)
 ];
 // Gaussian elimination for the 8x8 DLT system (partial pivoting)
 function solveLin(A,b){
@@ -554,7 +651,17 @@ function imgToWorld(x,y){
 // objective's default spot.
 const SLAYER_POS={x:0.416,y:0.267};
 const DRAGON_POS={x:0.639,y:0.609};
-const WARD_RANGE_W=0.115;              // ward vision radius, as a fraction of the arena side
+// Vision radii as fractions of the flat arena side (the same unit for all
+// three). hero/tower were measured from minimap screenshots (2026-07):
+// hero-reveals-hero pairs ≈0.115–0.13, tower-reveals-hero ≈0.085-0.09.
+// These are DEFAULTS — the live values are editable in the Board sheet and
+// synced to every device via Supabase (reserved row in tactic_scenarios),
+// with a localStorage cache.
+const VISION_DEFAULTS={hero:0.11,tower:0.10,ward:0.11};
+const VISION_ROW='__vision_settings__';          // reserved scenario name
+// on: {blue,red} — each side's vision toggles independently so a coach can
+// show just one team's sight range at a time.
+const vision={on:{blue:false,red:false},r:Object.assign({},VISION_DEFAULTS)};
 const CAL=new URLSearchParams(location.search).has('cal');
 
 // ════════════════════════════════════════════════════════════════
@@ -578,6 +685,7 @@ const ICONS={
   stop : I('<rect x="5" y="5" width="10" height="10" rx="1"/>',true),
   ward : I('<path d="M2 10s3-4.8 8-4.8 8 4.8 8 4.8-3 4.8-8 4.8S2 10 2 10z"/><circle cx="10" cy="10" r="2.1"/>'),
   heroes:I('<circle cx="10" cy="6.4" r="3.1"/><path d="M3.8 17c.5-3.3 3-5 6.2-5s5.7 1.7 6.2 5"/>'),
+  help : I('<circle cx="10" cy="10" r="7.5"/><path d="M7.7 7.6a2.3 2.3 0 014.4.9c0 1.7-2.1 1.7-2.1 3.4"/><circle cx="10" cy="14.3" r=".2" fill="currentColor"/>'),
 };
 
 // ════════════════════════════════════════════════════════════════
@@ -607,6 +715,9 @@ const state={
   view:{s:1,tx:0,ty:0},// map zoom / pan
 };
 const penState={size:5,color:'#FF4444'};
+// eraser is a fixed multiple of the pen size, never as thin as the pen —
+// a same-size eraser can't reliably clear a stroke it only grazed.
+const eraserSize=()=>Math.max(penState.size*3.5,20);
 let _idc=0; const uid=()=>'t'+(++_idc)+'_'+Math.floor(performance.now());
 const F=()=>state.frames[state.cur];
 const $=id=>document.getElementById(id);
@@ -805,8 +916,8 @@ function spawnSpot(team){
 //  BENCH
 // ════════════════════════════════════════════════════════════════
 function benchTokenHTML(item,team){
-  return '<div class="bench-token '+team+'" draggable="true" data-id="'+item.id+'" data-team="'+team+'" title="tap, then tap the map">'+
-    '<button class="bt-rm" data-id="'+item.id+'" data-team="'+team+'" title="remove from bench">×</button>'+
+  return '<div class="bench-token '+team+'" draggable="true" data-id="'+item.id+'" data-team="'+team+'" title="Tap, then tap the map">'+
+    '<button class="bt-rm" data-id="'+item.id+'" data-team="'+team+'" title="Remove from bench">×</button>'+
     '<div class="ring"><span class="init">'+esc(initials(item.hero))+'</span>'+heroImgTag(item.hero)+'</div>'+
     '<div class="nm">'+esc(item.hero)+'</div></div>';
 }
@@ -852,16 +963,14 @@ function towerSVG(side){
 function towerVisible(t){ return state.towers[t.side][t.lane][t.tier]; }
 
 function summonSVG(type){
-  if(type==='vanguard'){ // purple horned helmet
-    return '<svg width="100%" height="100%" viewBox="0 0 40 40"><g fill="#9b5cff" stroke="#5a2da8" stroke-width="1.5">'+
-      '<path d="M6 14 C2 8 8 4 12 8 L14 12 Z"/><path d="M34 14 C38 8 32 4 28 8 L26 12 Z"/>'+
-      '<path d="M10 14 a10 10 0 0 1 20 0 v8 a10 10 0 0 1 -20 0 z"/></g>'+
-      '<rect x="16" y="20" width="8" height="4" fill="#2a1250"/></svg>';
+  // Reuse the map objective art instead of a bespoke icon: vanguard is the
+  // dragon image's own (purple) source art, untouched — the yellow recolor
+  // (--dragon-filter) is exclusive to the dragon pit. Darkslayer reuses the
+  // slayer image as-is.
+  if(type==='vanguard'){
+    return '<img src="assets/dragon.png" alt="Vanguard" draggable="false" style="width:100%;height:100%;object-fit:contain;"/>';
   }
-  // darkslayer: purple bat-wing
-  return '<svg width="100%" height="100%" viewBox="0 0 40 40"><g fill="#7a3df0" stroke="#3d1f80" stroke-width="1.5">'+
-    '<path d="M20 10 C12 6 4 8 2 18 C8 16 10 18 12 22 C14 18 17 16 20 18 C23 16 26 18 28 22 C30 18 32 16 38 18 C36 8 28 6 20 10 Z"/>'+
-    '<circle cx="20" cy="24" r="6"/></g><circle cx="17.5" cy="23" r="1.3" fill="#ffcf3a"/><circle cx="22.5" cy="23" r="1.3" fill="#ffcf3a"/></svg>';
+  return '<img src="assets/slayer.png" alt="Darkslayer" draggable="false" style="width:100%;height:100%;object-fit:contain;"/>';
 }
 
 function renderMap(){
@@ -892,6 +1001,9 @@ function renderMap(){
     mapBox.appendChild(d);
   });
 
+  if(state.onionSkin&&!state.playing&&state.cur>0){
+    state.frames[state.cur-1].heroes.forEach(h=>mapBox.appendChild(tokenEl(h,true)));
+  }
   f.heroes.forEach(h=>mapBox.appendChild(tokenEl(h)));
 
   // overlays stay on top, in this order
@@ -912,14 +1024,16 @@ function objEl(type,pos,draggable){
   if(draggable) enablePieceDrag(d,F().dragonPos,null);   // dragon: drag only, no menu
   return d;
 }
-function tokenEl(h){
-  const d=document.createElement('div'); d.className='token '+h.team; d.id=h.id;
+function tokenEl(h,ghost){
+  const d=document.createElement('div'); d.className='token '+h.team+(ghost?' ghost':''); d.id=(ghost?'ghost-':'')+h.id;
   d.style.left=(h.x*100)+'%'; d.style.top=(h.y*100)+'%';
   d.style.width=state.tokenSize+'px';
   d.innerHTML='<div class="ring" style="width:'+state.tokenSize+'px;height:'+state.tokenSize+'px;">'+
     '<span class="init" style="font-size:'+Math.round(state.tokenSize*0.34)+'px;">'+esc(initials(h.hero))+'</span>'+heroImgTag(h.hero)+'</div>'+
     '<div class="lbl">'+esc(h.hero)+'</div>';
-  enablePieceDrag(d,h,()=>openTokenMenu(h));
+  if(ghost)return d;   // ghost pieces are display-only — no drag, no menu
+  // vision circle follows while dragging (no-op unless vision mode is on)
+  enablePieceDrag(d,h,()=>openTokenMenu(h),()=>{ if(vision.on.blue||vision.on.red)renderShapes(); });
   return d;
 }
 
@@ -1063,6 +1177,14 @@ function toggleNames(){
   $('tglNames').classList.toggle('on',state.showNames);
   document.body.classList.toggle('hide-names',!state.showNames);
 }
+// runtime-only UI setting — never saved to boardState(), never drawn in exportPNG
+// (both build from state.frames data, not this DOM overlay).
+state.onionSkin=false;
+function toggleOnionSkin(){
+  state.onionSkin=!state.onionSkin;
+  $('tglOnion').classList.toggle('on',state.onionSkin);
+  renderMap();
+}
 
 // ════════════════════════════════════════════════════════════════
 //  TOWERS UI (board sheet) — tap pips; tap a lane name for the row
@@ -1078,13 +1200,13 @@ function buildTowersUI(){
   wrap.querySelectorAll('.tw-pip').forEach(b=>b.onclick=()=>{
     const a=state.towers[b.dataset.side][b.dataset.lane];
     a[+b.dataset.tier]=!a[+b.dataset.tier];
-    syncTowersUI(); renderMap(); markDirty();
+    syncTowersUI(); renderMap(); renderShapes(); markDirty();
   });
   wrap.querySelectorAll('.tw-lane').forEach(b=>b.onclick=()=>{
     const a=state.towers[b.dataset.side][b.dataset.lane];
     const all=a.every(Boolean);
     state.towers[b.dataset.side][b.dataset.lane]=[!all,!all,!all];
-    syncTowersUI(); renderMap(); markDirty();
+    syncTowersUI(); renderMap(); renderShapes(); markDirty();
   });
   syncTowersUI();
 }
@@ -1127,20 +1249,41 @@ function handleSVG(s){
   const h=(x,y,part)=>'<circle class="handle" data-id="'+s.id+'" data-part="'+part+'" cx="'+px(x,'x')+'" cy="'+px(y,'y')+'" r="8" fill="#0a0a0a" stroke="'+s.color+'" stroke-width="2"/>';
   return h(s.x1,s.y1,'h1')+h(s.x2,s.y2,'h2');
 }
-// A ward sees a circle on the ground, but the map art is a perspective
-// render — so the circle is drawn in world space and projected point by
-// point, coming out wider near the bottom of the image than the top.
-function wardRangeSVG(w){
-  if(!w.range)return '';
-  const c=imgToWorld(w.x,w.y), col=w.team==='blue'?'#4488FF':'#FF4444';
+// Anything that "sees" covers a circle on the flat ground, but the map art
+// is a perspective render — so the circle is drawn in world space and
+// projected point by point, coming out wider near the bottom of the image
+// than the top. Because it's computed in world space, mirrored positions
+// produce exactly mirrored coverage. nx/ny: normalized image coords of the
+// source (for towers this is the icon's foot, matching the in-game rule that
+// vision is measured from the tower's base). rw: radius in world units.
+function visionCircleSVG(nx,ny,rw,col,dash){
+  const c=imgToWorld(nx,ny);
   let d='';
   const N=44;
   for(let i=0;i<=N;i++){
     const a=i/N*2*Math.PI;
-    const p=worldToImg(c.u+WARD_RANGE_W*Math.cos(a), c.v+WARD_RANGE_W*Math.sin(a));
+    const p=worldToImg(c.u+rw*Math.cos(a), c.v+rw*Math.sin(a));
     d+=(i?'L':'M')+(p.x*mapW).toFixed(1)+' '+(p.y*mapH).toFixed(1);
   }
-  return '<path d="'+d+'Z" fill="'+col+'" fill-opacity="0.07" stroke="'+col+'" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="4 4" pointer-events="none"/>';
+  return '<path d="'+d+'Z" fill="'+col+'" fill-opacity="0.07" stroke="'+col+'" stroke-opacity="0.55" stroke-width="1.5" stroke-dasharray="'+(dash||'4 4')+'" pointer-events="none"/>';
+}
+function wardRangeSVG(w){
+  if(!w.range)return '';
+  return visionCircleSVG(w.x,w.y,vision.r.ward,w.team==='blue'?'#4488FF':'#FF4444');
+}
+// Vision mode overlay: every hero token and every standing tower, per side.
+function visionModeSVG(){
+  if(!vision.on.blue&&!vision.on.red)return '';
+  let h='';
+  TOWER_POSITIONS.forEach(t=>{
+    if(!towerVisible(t)||!vision.on[t.side])return;
+    h+=visionCircleSVG(t.x/100,t.y/100,vision.r.tower,t.side==='blue'?'#64B5F6':'#FF7043','2 5');
+  });
+  F().heroes.forEach(hh=>{
+    if(!vision.on[hh.team])return;
+    h+=visionCircleSVG(hh.x,hh.y,vision.r.hero,hh.team==='blue'?'#4488FF':'#FF4444');
+  });
+  return h;
 }
 // ?cal=1 overlay: projected world grid + corner/pit markers, for lining the
 // homography up with the art. Draws into the same SVG as the shapes.
@@ -1173,6 +1316,7 @@ function renderShapes(){
   svg.setAttribute('viewBox','0 0 '+mapW+' '+mapH);
   const f=F();
   let h=shapeDefs();
+  h+=visionModeSVG();
   f.wards.forEach(w=>h+=wardRangeSVG(w));
   f.shapes.filter(s=>s.kind==='zone').forEach(s=>h+=zoneSVG(s));
   f.shapes.filter(s=>s.kind==='arrow').forEach(s=>h+=arrowSVG(s));
@@ -1249,6 +1393,37 @@ function deleteShape(id){
   pushH({t:'delShape',f:state.cur,idx,s:f.shapes[idx]});
   f.shapes.splice(idx,1);
   state.sel=null; renderShapes(); markDirty();
+}
+
+// object eraser: the pen/erase canvas overlay sits above the shape SVG, so
+// the erase tool needs its own hit-test to also clear arrows/zones it drags
+// over (not just pen strokes).
+function shapeHitTest(s,px_,py_,r){
+  if(s.kind==='zone'){
+    const cx=(px(s.x1,'x')+px(s.x2,'x'))/2, cy=(px(s.y1,'y')+px(s.y2,'y'))/2;
+    const rx=Math.max(Math.abs(px(s.x2,'x')-px(s.x1,'x'))/2,2)+r, ry=Math.max(Math.abs(px(s.y2,'y')-px(s.y1,'y'))/2,2)+r;
+    const dx=(px_-cx)/rx, dy=(py_-cy)/ry;
+    return dx*dx+dy*dy<=1;
+  }
+  const x1=px(s.x1,'x'),y1=px(s.y1,'y'),x2=px(s.x2,'x'),y2=px(s.y2,'y');
+  const dx=x2-x1, dy=y2-y1, len2=dx*dx+dy*dy;
+  let t=len2?((px_-x1)*dx+(py_-y1)*dy)/len2:0; t=Math.max(0,Math.min(1,t));
+  const cx=x1+t*dx, cy=y1+t*dy, ddx=px_-cx, ddy=py_-cy;
+  return Math.sqrt(ddx*ddx+ddy*ddy)<=r;
+}
+function eraseShapesAt(nx,ny){
+  const f=F(), r=eraserSize(), px_=px(nx,'x'), py_=px(ny,'y');
+  let changed=false;
+  for(let i=f.shapes.length-1;i>=0;i--){
+    if(shapeHitTest(f.shapes[i],px_,py_,r)){
+      pushH({t:'delShape',f:state.cur,idx:i,s:f.shapes[i]});
+      f.shapes.splice(i,1); changed=true;
+    }
+  }
+  if(changed){
+    if(state.sel&&!f.shapes.find(s=>s.id===state.sel)) state.sel=null;
+    renderShapes(); markDirty();
+  }
 }
 
 // ── shape creation + deselect + pan, all from one mapBox pointerdown ──
@@ -1337,13 +1512,15 @@ canvas.addEventListener('pointerdown',e=>{
   if(state.playing)return;
   e.preventDefault(); e.stopPropagation(); canvas.setPointerCapture(e.pointerId);
   const n=clientToNorm(e.clientX,e.clientY);
-  _cur={color:penState.color,size:penState.size,erase:state.tool==='erase',pts:[n]};
+  if(state.tool==='erase') eraseShapesAt(n.x,n.y);
+  _cur={color:penState.color,size:state.tool==='erase'?eraserSize():penState.size,erase:state.tool==='erase',pts:[n]};
   F().strokes.push(_cur);
   paintSegment(_cur,n,n);
 });
 canvas.addEventListener('pointermove',e=>{
   if(!_cur)return;
   const n=clientToNorm(e.clientX,e.clientY);
+  if(state.tool==='erase') eraseShapesAt(n.x,n.y);
   const prev=_cur.pts[_cur.pts.length-1];
   _cur.pts.push(n);
   paintSegment(_cur,prev,n);
@@ -1385,12 +1562,29 @@ function doRedo(){ const a=hist.redo.pop(); if(!a)return; applyH(a,false); hist.
 function renderFrames(){
   const w=$('frameChips');
   w.innerHTML=state.frames.map((f,i)=>
-    '<button class="f-chip'+(i===state.cur?' on':'')+'" data-i="'+i+'" title="Step '+(i+1)+'">'+(i+1)+'</button>').join('');
-  w.querySelectorAll('.f-chip').forEach(b=>b.onclick=e=>{
-    if(state.playing)return;
+    '<button class="f-chip'+(i===state.cur?' on':'')+'" data-i="'+i+'" title="Step '+(i+1)+' — hold or right-click for options">'+(i+1)+'</button>').join('');
+  w.querySelectorAll('.f-chip').forEach(b=>{
     const i=+b.dataset.i;
-    if(i===state.cur){ openFrameMenu(e.clientX,e.clientY); return; }
-    setFrame(i);
+    let lpTimer=null, longPressed=false;
+    b.addEventListener('pointerdown',e=>{
+      if(state.playing)return;
+      longPressed=false;
+      lpTimer=setTimeout(()=>{ longPressed=true; openFrameMenu(i,e.clientX,e.clientY); },500);
+    });
+    const cancelLp=()=>{ if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; } };
+    b.addEventListener('pointermove',cancelLp);
+    b.addEventListener('pointerup',()=>{
+      cancelLp();
+      if(longPressed||state.playing)return;
+      if(i===state.cur)openFrameMenu(i);
+      else setFrame(i);
+    });
+    b.addEventListener('pointercancel',cancelLp);
+    b.addEventListener('contextmenu',e=>{
+      e.preventDefault(); cancelLp();
+      if(state.playing)return;
+      openFrameMenu(i,e.clientX,e.clientY);
+    });
   });
   const on=w.querySelector('.f-chip.on'); if(on)on.scrollIntoView({block:'nearest',inline:'nearest'});
 }
@@ -1405,8 +1599,14 @@ function addFrame(){
   renderAll(); markDirty();
   toast('Step '+(state.cur+1)+' added — move pieces to build the play.');
 }
-function openFrameMenu(cx,cy){
-  const items=[{label:'Clear drawings on this step',fn:clearDrawing}];
+function openFrameMenu(i,cx,cy){
+  if(i!==state.cur)setFrame(i);
+  const items=[{label:'Duplicate step '+(state.cur+1),fn:addFrame}];
+  if(state.cur>0)
+    items.push({label:'Move left',fn:()=>moveFrame(state.cur,state.cur-1)});
+  if(state.cur<state.frames.length-1)
+    items.push({label:'Move right',fn:()=>moveFrame(state.cur,state.cur+1)});
+  items.push({label:'Clear drawings on this step',fn:clearDrawing});
   if(state.frames.length>1)
     items.push({label:'Delete step '+(state.cur+1),style:'border-color:var(--red);color:var(--red);',fn:()=>{
       state.frames.splice(state.cur,1);
@@ -1415,6 +1615,13 @@ function openFrameMenu(cx,cy){
       renderAll(); markDirty();
     }});
   miniMenu('Step '+(state.cur+1),items,cx,cy);
+}
+function moveFrame(from,to){
+  const [fr]=state.frames.splice(from,1);
+  state.frames.splice(to,0,fr);
+  state.cur=to;
+  hist.undo=[]; hist.redo=[];   // frame indices shift — drop stale history
+  renderAll(); markDirty();
 }
 
 // playback: glide pieces between consecutive steps via CSS transitions
@@ -1506,6 +1713,49 @@ mapImg.addEventListener('load',()=>{ mapImgAspect=mapImg.naturalHeight/mapImg.na
 window.addEventListener('resize',requestResize);
 
 // ════════════════════════════════════════════════════════════════
+//  VISION MODE — toggle + editable, device-synced radii
+//  The three radii live in localStorage (instant) and in a reserved row of
+//  tactic_scenarios named __vision_settings__ (shared), so a value adjusted
+//  on one device shows up everywhere after a reload. Writes are debounced.
+// ════════════════════════════════════════════════════════════════
+function toggleVision(side){
+  vision.on[side]=!vision.on[side];
+  $('btnVision'+(side==='blue'?'Blue':'Red')).classList.toggle('active',vision.on[side]);
+  renderShapes();
+}
+function visionUIRefresh(){
+  [['hero','visHero'],['tower','visTower'],['ward','visWard']].forEach(([k,id])=>{
+    $(id).value=Math.round(vision.r[k]*1000);
+    $(id+'Val').textContent=(vision.r[k]*100).toFixed(1)+'%';
+  });
+}
+function setVisionR(k,v){
+  vision.r[k]=v/1000;
+  visionUIRefresh(); renderShapes();
+  saveVisionLocal(); scheduleVisionSync();
+}
+function resetVisionR(){
+  vision.r=Object.assign({},VISION_DEFAULTS);
+  visionUIRefresh(); renderShapes();
+  saveVisionLocal(); scheduleVisionSync();
+}
+function saveVisionLocal(){
+  try{ localStorage.setItem('tactic_vision_v1',JSON.stringify(vision.r)); }catch(e){}
+}
+// Beta: vision settings live on this device only (localStorage). Cloud
+// sync returns with the org-scoped scenarios port (Phase 3).
+function scheduleVisionSync(){
+  $('visSyncState').textContent='saved on this device';
+}
+async function loadVisionSettings(){
+  try{
+    const loc=JSON.parse(localStorage.getItem('tactic_vision_v1')||'null');
+    if(loc)Object.keys(VISION_DEFAULTS).forEach(k=>{ if(typeof loc[k]==='number')vision.r[k]=loc[k]; });
+  }catch(e){}
+  visionUIRefresh();
+}
+
+// ════════════════════════════════════════════════════════════════
 //  SAVE / LOAD  (Supabase: tactic_scenarios — v1 saves still load)
 // ════════════════════════════════════════════════════════════════
 const r4=v=>+(+v).toFixed(4);
@@ -1593,6 +1843,186 @@ function buildPreview(){
   return c.toDataURL('image/jpeg',0.7);
 }
 
+// ════════════════════════════════════════════════════════════════
+//  EXPORT PNG — full-resolution render of the CURRENT frame (F()),
+//  for sharing a play in Discord/LINE. Mirrors buildPreview's layers
+//  (map, towers, objectives, wards, shapes, strokes, hero tokens) but
+//  at the map's native pixel size and with real portrait images.
+// ════════════════════════════════════════════════════════════════
+function loadImgEl(src){
+  return new Promise((res,rej)=>{
+    const im=new Image(); im.crossOrigin='anonymous';
+    im.onload=()=>res(im); im.onerror=rej; im.src=src;
+  });
+}
+function drawArrowCanvas(x,x1,y1,x2,y2,color,lw){
+  const ang=Math.atan2(y2-y1,x2-x1), headLen=lw*3.2;
+  x.strokeStyle=color; x.lineWidth=lw; x.lineCap='round';
+  x.beginPath(); x.moveTo(x1,y1); x.lineTo(x2,y2); x.stroke();
+  x.beginPath(); x.moveTo(x2,y2);
+  x.lineTo(x2-headLen*Math.cos(ang-Math.PI/6), y2-headLen*Math.sin(ang-Math.PI/6));
+  x.lineTo(x2-headLen*Math.cos(ang+Math.PI/6), y2-headLen*Math.sin(ang+Math.PI/6));
+  x.closePath(); x.fillStyle=color; x.fill();
+}
+async function downloadCanvas(c,filename){
+  let blob;
+  try{ blob=await new Promise(res=>c.toBlob(res,'image/png')); }
+  catch(e){ blob=null; }
+  if(!blob) return toast('Export failed — try again.',true);
+  const file=new File([blob],filename,{type:'image/png'});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:filename}); return; }catch(e){ /* user cancelled or unsupported — fall through */ }
+  }
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+async function exportPNG(){
+  if(!mapImg.naturalWidth) return toast('Map image not loaded yet — try again in a moment.',true);
+  toast('Building image…');
+  const W=mapImg.naturalWidth, H=mapImg.naturalHeight, k=W/mapW;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const x=c.getContext('2d');
+  const f=F();
+
+  x.drawImage(mapImg,0,0,W,H);
+
+  const cs=getComputedStyle(document.documentElement);
+  const towerCol={blue:(cs.getPropertyValue('--tower-blue')||'#4488FF').trim(),
+                  red:(cs.getPropertyValue('--tower-red')||'#FF4444').trim()};
+  TOWER_POSITIONS.forEach(t=>{
+    if(!towerVisible(t))return;
+    const px_=t.x/100*W, py_=t.y/100*H;
+    x.beginPath(); x.arc(px_,py_,W*0.009,0,Math.PI*2);
+    x.fillStyle=towerCol[t.side]; x.fill(); x.strokeStyle='#000'; x.lineWidth=1; x.stroke();
+  });
+
+  // dragon.png's source art is purple — the live board recolors it yellow via
+  // the --dragon-filter CSS var (#dragonIcon img). Canvas has no CSS cascade,
+  // so replicate it explicitly here; skipping this left the exported pit purple.
+  const dragonFilter=(cs.getPropertyValue('--dragon-filter')||'').trim();
+  if(state.objectives.slayer){
+    try{ const img=await loadImgEl('assets/slayer.png'); x.drawImage(img,SLAYER_POS.x*W-23*k,SLAYER_POS.y*H-14*k,46*k,28*k); }catch(e){}
+  }
+  if(state.objectives.dragon){
+    try{
+      const img=await loadImgEl('assets/dragon.png');
+      x.filter=dragonFilter||'none';
+      x.drawImage(img,f.dragonPos.x*W-20*k,f.dragonPos.y*H-18*k,40*k,36*k);
+      x.filter='none';
+    }catch(e){ x.filter='none'; }
+  }
+
+  f.wards.forEach(w=>{
+    if(!w.range)return;
+    const col=w.team==='blue'?'#4488FF':'#FF4444', c0=imgToWorld(w.x,w.y), N=44;
+    x.beginPath();
+    for(let i=0;i<=N;i++){
+      const a=i/N*2*Math.PI, p=worldToImg(c0.u+WARD_RANGE_W*Math.cos(a), c0.v+WARD_RANGE_W*Math.sin(a));
+      const px2=p.x*W, py2=p.y*H; i?x.lineTo(px2,py2):x.moveTo(px2,py2);
+    }
+    x.closePath(); x.fillStyle=col; x.globalAlpha=0.07; x.fill(); x.globalAlpha=1;
+    x.strokeStyle=col; x.lineWidth=1.5; x.setLineDash([4,4]); x.stroke(); x.setLineDash([]);
+  });
+  f.wards.forEach(w=>{
+    const col=w.team==='blue'?'#4488FF':'#FF4444', wx=w.x*W, wy=w.y*H, r=8*k;
+    x.beginPath(); x.ellipse(wx,wy,r*1.1,r*0.75,0,0,Math.PI*2);
+    x.fillStyle='rgba(10,10,10,.85)'; x.fill(); x.strokeStyle=col; x.lineWidth=1.5; x.stroke();
+    x.beginPath(); x.arc(wx,wy,r*0.28,0,Math.PI*2); x.fillStyle=col; x.fill();
+  });
+
+  for(const s of f.summons){
+    const sz=34*k;
+    try{
+      // Vanguard uses the dragon art's own (purple) source color — the yellow
+      // recolor (dragonFilter) is exclusive to the dragon pit, applied above.
+      const img=await loadImgEl(s.type==='vanguard'?'assets/dragon.png':'assets/slayer.png');
+      x.drawImage(img,s.x*W-sz/2,s.y*H-sz/2,sz,sz);
+    }catch(e){
+      const col=s.type==='vanguard'?'#9b5cff':'#7a3df0';
+      x.beginPath(); x.arc(s.x*W,s.y*H,10*k,0,Math.PI*2);
+      x.fillStyle=col; x.fill(); x.strokeStyle='#2a1250'; x.lineWidth=1.5; x.stroke();
+    }
+  }
+
+  f.shapes.filter(s=>s.kind==='zone').forEach(s=>{
+    const x1=s.x1*W,y1=s.y1*H,x2=s.x2*W,y2=s.y2*H;
+    const cx=(x1+x2)/2, cy=(y1+y2)/2, rx=Math.max(Math.abs(x2-x1)/2,2), ry=Math.max(Math.abs(y2-y1)/2,2);
+    x.beginPath(); x.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);
+    x.fillStyle=s.color; x.globalAlpha=0.13; x.fill(); x.globalAlpha=1;
+    x.strokeStyle=s.color; x.lineWidth=2*k; x.setLineDash([6*k,5*k]); x.stroke(); x.setLineDash([]);
+  });
+  f.shapes.filter(s=>s.kind==='arrow').forEach(s=>drawArrowCanvas(x,s.x1*W,s.y1*H,s.x2*W,s.y2*H,s.color,3.5*k));
+
+  f.strokes.forEach(s=>{
+    if(s.erase||!s.pts.length)return;
+    x.save();
+    x.strokeStyle=s.color; x.fillStyle=s.color; x.lineWidth=Math.max(1,s.size*k); x.lineCap='round'; x.lineJoin='round';
+    if(s.pts.length===1){ const p=s.pts[0]; x.beginPath(); x.arc(p.x*W,p.y*H,s.size*k/2,0,Math.PI*2); x.fill(); }
+    else{ x.beginPath(); s.pts.forEach((p,i)=>{ const px3=p.x*W,py3=p.y*H; i?x.lineTo(px3,py3):x.moveTo(px3,py3); }); x.stroke(); }
+    x.restore();
+  });
+
+  const tokR=(state.tokenSize/2)*k;
+  for(const h of f.heroes){
+    const cx=h.x*W, cy=h.y*H, col=h.team==='blue'?'#4488FF':'#FF4444';
+    let drewImg=false;
+    try{
+      const img=await loadImgEl(heroImgUrl(h.hero));
+      x.save(); x.beginPath(); x.arc(cx,cy,tokR,0,Math.PI*2); x.clip();
+      x.drawImage(img,cx-tokR,cy-tokR,tokR*2,tokR*2);
+      x.restore(); drewImg=true;
+    }catch(e){}
+    if(!drewImg){
+      x.beginPath(); x.arc(cx,cy,tokR,0,Math.PI*2); x.fillStyle='#222'; x.fill();
+      x.fillStyle='#fff'; x.font=Math.round(tokR*0.7)+'px monospace'; x.textAlign='center'; x.textBaseline='middle';
+      x.fillText(initials(h.hero),cx,cy);
+    }
+    x.beginPath(); x.arc(cx,cy,tokR,0,Math.PI*2); x.strokeStyle=col; x.lineWidth=Math.max(2,tokR*0.12); x.stroke();
+    if(state.showNames){
+      x.font=Math.round(tokR*0.5)+'px monospace'; x.textAlign='center'; x.textBaseline='top';
+      x.strokeStyle='#000'; x.lineWidth=3; x.strokeText(h.hero,cx,cy+tokR+3);
+      x.fillStyle='#fff'; x.fillText(h.hero,cx,cy+tokR+3);
+    }
+  }
+
+  const filename=(state.scnName||'tactic-scenario').replace(/[^a-z0-9-_ ]/gi,'').trim()||'tactic-scenario';
+  await downloadCanvas(c,filename+'.png');
+  toast('Exported “'+filename+'.png”');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  OFFLINE SAVE CACHE — if Supabase can't be reached, the payload is kept
+//  in localStorage (capped at 10, oldest dropped) instead of being lost.
+//  On next boot, checkOfflineSaves() offers to restore the newest one.
+// ════════════════════════════════════════════════════════════════
+const OFFLINE_KEY='tactic_offline_saves';
+function offlineSaves(){ try{ return JSON.parse(localStorage.getItem(OFFLINE_KEY)||'[]'); }catch(e){ return []; } }
+function pushOfflineSave(payload){
+  let arr=offlineSaves();
+  arr.push(Object.assign({},payload,{savedAt:new Date().toISOString()}));
+  if(arr.length>10)arr=arr.slice(arr.length-10);
+  try{ localStorage.setItem(OFFLINE_KEY,JSON.stringify(arr)); }catch(e){}
+}
+function removeOfflineSave(i){
+  const arr=offlineSaves(); arr.splice(i,1);
+  try{ localStorage.setItem(OFFLINE_KEY,JSON.stringify(arr)); }catch(e){}
+}
+function checkOfflineSaves(){
+  const arr=offlineSaves();
+  if(!arr.length)return;
+  const latest=arr[arr.length-1];
+  toast(arr.length+' local save'+(arr.length>1?'s':'')+' saved while offline — restore the latest?',false,{
+    label:'Restore',
+    fn:()=>{
+      applyBoardState(latest.board_state); state.scnName=latest.name;
+      removeOfflineSave(arr.length-1);
+      toast('Restored “'+latest.name+'” — Save again once you\'re online to sync it.');
+    }
+  });
+}
+
 async function openSave(){
   if(!sb)return toast('Supabase library not loaded.',true);
   if(!await requireSession())return;
@@ -1607,13 +2037,24 @@ async function openSave(){
       const inp=modal.querySelector('#svName');
       const go=async()=>{
         const name=inp.value.trim(); if(!name)return inp.focus();
+        if(name===VISION_ROW)return toast('That name is reserved.',true);
         const payload={name,board_state:boardState(),preview_image:buildPreview(),updated_at:new Date().toISOString()};
+        const goOffline=(msg)=>{
+          pushOfflineSave(payload); state.scnName=name; dirty=false; closeModal();
+          toast(msg,true);
+        };
+        if(!navigator.onLine)return goOffline('Offline — saved on this device. Re-save once you\'re back online.');
         toast('Saving…');
-        let {data:existing}=await sb.from('tactic_scenarios').select('id').eq('name',name).limit(1);
-        let res;
-        if(existing&&existing.length){ res=await sb.from('tactic_scenarios').update(payload).eq('id',existing[0].id); }
-        else { res=await sb.from('tactic_scenarios').insert(payload); }
-        if(res.error)return toast('Save failed: '+res.error.message,true);
+        try{
+          let {data:existing,error:selErr}=await sb.from('tactic_scenarios').select('id').eq('name',name).limit(1);
+          if(selErr)throw new Error(selErr.message);
+          let res;
+          if(existing&&existing.length){ res=await sb.from('tactic_scenarios').update(payload).eq('id',existing[0].id); }
+          else { res=await sb.from('tactic_scenarios').insert(payload); }
+          if(res.error)throw new Error(res.error.message);
+        }catch(e){
+          return goOffline('Couldn\'t reach the server — saved on this device instead.');
+        }
         state.scnName=name; dirty=false; closeModal();
         toast('Saved “'+name+'”');
       };
@@ -1623,22 +2064,70 @@ async function openSave(){
     });
 }
 
+// Parses a leading "[tag] " convention out of a scenario name — no schema
+// change; the real `tags` column comes with the beta migration. Returns
+// {tag,rest} where tag is '' if the name has no bracket prefix.
+function parseTag(name){
+  const m=/^\[([^\]]+)\]\s*(.*)$/.exec(name||'');
+  return m?{tag:m[1],rest:m[2]}:{tag:'',rest:name||''};
+}
+function relTime(iso){
+  if(!iso)return '';
+  const s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
+  if(s<60)return 'just now';
+  if(s<3600)return Math.floor(s/60)+'m ago';
+  if(s<86400)return Math.floor(s/3600)+'h ago';
+  if(s<2592000)return Math.floor(s/86400)+'d ago';
+  return Math.floor(s/2592000)+'mo ago';
+}
 async function openLoad(){
   if(!sb)return toast('Supabase library not loaded.',true);
   if(!await requireSession())return;
   closeSheets();
-  const {data,error}=await sb.from('tactic_scenarios').select('*').order('updated_at',{ascending:false});
+  let {data,error}=await sb.from('tactic_scenarios').select('*').order('updated_at',{ascending:false});
   if(error)return toast('Load failed: '+error.message,true);
+  const tags=[...new Set(data.map(s=>parseTag(s.name).tag).filter(Boolean))].sort();
+  data=data.filter(s=>s.name!==VISION_ROW);   // reserved settings row, not a scenario
   showModal('Load scenario',
     !data.length ? '<div class="note">No saved scenarios yet.</div>' :
-    '<div class="scenario-grid">'+data.map(s=>{
+    '<input class="modal-search" id="ldSearch" placeholder="Search scenarios…"/>'+
+    (tags.length?'<div class="tag-chips" id="ldTags">'+tags.map(t=>
+      '<button class="tag-chip" data-tag="'+esc(t)+'">'+esc(t)+'</button>').join('')+'</div>':'')+
+    '<div class="scenario-grid" id="ldGrid">'+data.map(s=>{
       const steps=(s.board_state&&s.board_state.frames)?s.board_state.frames.length:1;
-      return '<div class="scenario-card" data-id="'+s.id+'">'+
+      const {tag,rest}=parseTag(s.name);
+      return '<div class="scenario-card" data-id="'+s.id+'" data-name="'+esc(s.name.toLowerCase())+'" data-tag="'+esc(tag)+'">'+
       '<img src="'+(s.preview_image||'')+'" alt="" onerror="this.style.background=\'#111\'"/>'+
-      '<div class="cap"><span class="nmm">'+esc(s.name)+'</span><span class="steps">'+steps+' step'+(steps>1?'s':'')+'</span><span class="del" data-del="'+s.id+'" title="delete">✕</span></div></div>';
-    }).join('')+'</div>',
+      '<div class="cap"><span class="nmm">'+(tag?'<span class="tag-badge">'+esc(tag)+'</span> ':'')+esc(rest)+'</span>'+
+      '<span class="steps">'+steps+' step'+(steps>1?'s':'')+'</span>'+
+      '<span class="del" data-del="'+s.id+'" title="Delete">✕</span></div>'+
+      '<div class="cap sub"><span class="when">'+relTime(s.updated_at)+'</span></div></div>';
+    }).join('')+'</div>'+
+    '<div class="note" id="ldEmpty" style="display:none;">No scenarios match.</div>',
     (modal)=>{
-      modal.querySelectorAll('.scenario-card').forEach(card=>{
+      const grid=modal.querySelector('#ldGrid');
+      const search=modal.querySelector('#ldSearch');
+      let activeTag='';
+      const applyFilter=()=>{
+        const q=(search.value||'').toLowerCase().trim();
+        let shown=0;
+        grid.querySelectorAll('.scenario-card').forEach(card=>{
+          const match=(!activeTag||card.dataset.tag===activeTag)&&(!q||card.dataset.name.includes(q));
+          card.style.display=match?'':'none';
+          if(match)shown++;
+        });
+        modal.querySelector('#ldEmpty').style.display=shown?'none':'';
+      };
+      search.addEventListener('input',applyFilter);
+      const tagWrap=modal.querySelector('#ldTags');
+      if(tagWrap)tagWrap.querySelectorAll('.tag-chip').forEach(chip=>{
+        chip.addEventListener('click',()=>{
+          activeTag=activeTag===chip.dataset.tag?'':chip.dataset.tag;
+          tagWrap.querySelectorAll('.tag-chip').forEach(c=>c.classList.toggle('on',c.dataset.tag===activeTag));
+          applyFilter();
+        });
+      });
+      grid.querySelectorAll('.scenario-card').forEach(card=>{
         card.addEventListener('click',e=>{
           if(e.target.dataset.del)return;
           const rec=data.find(d=>String(d.id)===card.dataset.id);
@@ -1646,13 +2135,15 @@ async function openLoad(){
           closeModal(); toast('Loaded “'+rec.name+'”');
         });
       });
-      modal.querySelectorAll('.del').forEach(d=>d.addEventListener('click',async e=>{
+      grid.querySelectorAll('.del').forEach(d=>d.addEventListener('click',async e=>{
         e.stopPropagation();
         if(!await requireSession())return;
         if(!confirm('Delete this scenario?'))return;
         await sb.from('tactic_scenarios').delete().eq('id',d.dataset.del);
         e.target.closest('.scenario-card').remove();
+        applyFilter();
       }));
+      setTimeout(()=>search.focus(),60);
     });
 }
 
@@ -1672,11 +2163,112 @@ function showModal(title,bodyHTML,after){
 }
 function closeModal(){ if(_modal){_modal.remove();_modal=null;} }
 let _toastEl=null;
-function toast(msg,err){
+// action: {label,fn} — adds a button and keeps the toast up longer so it's
+// tappable (e.g. "Restore" for an offline-cached save).
+function toast(msg,err,action){
   if(_toastEl)_toastEl.remove();
-  const t=document.createElement('div'); t.className='toast'+(err?' err':''); t.textContent=msg;
+  const t=document.createElement('div'); t.className='toast'+(err?' err':'');
+  t.innerHTML='<span>'+esc(msg)+'</span>'+(action?'<button class="toast-action">'+esc(action.label)+'</button>':'');
   document.body.appendChild(t); _toastEl=t;
-  setTimeout(()=>{ if(_toastEl===t){t.remove();_toastEl=null;} },err?4200:2600);
+  const dur=action?9000:(err?4200:2600);
+  const timer=setTimeout(()=>{ if(_toastEl===t){t.remove();_toastEl=null;} },dur);
+  if(action)t.querySelector('.toast-action').onclick=()=>{
+    clearTimeout(timer);
+    if(_toastEl===t){t.remove();_toastEl=null;}
+    action.fn();
+  };
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ONBOARDING TOUR — first-visit help overlay ("?" in topbar replays it)
+// ════════════════════════════════════════════════════════════════
+const TOUR_STEPS=[
+  {t:'Pick heroes here',b:'Open the Heroes panel to search and tap a hero, then tap the map to place it.',
+   target:()=>isDesktop()?$('sheetHeroes'):document.querySelector('#toolbar .tool-btn[onclick*="sheetHeroes"]')},
+  {t:'Drag pieces around',b:'Heroes, wards and objectives can be dragged straight on the map with the Move tool.',
+   target:()=>$('mapBox')},
+  {t:'Steps build a play',b:'Each "step" chip at the bottom is a snapshot. Add steps and move pieces between them to animate a play.',
+   target:()=>$('frameStrip')},
+  {t:'Save your scenario',b:'Hit Save any time to store the board. Load brings back any saved scenario later.',
+   target:()=>$('btnSave')},
+];
+let _tourI=0;
+let _tourResize=null;
+function startTour(){
+  _tourI=0;
+  $('tourBg').classList.add('on');
+  showTourStep();
+  _tourResize=()=>positionTour();
+  window.addEventListener('resize',_tourResize);
+}
+function showTourStep(){
+  const s=TOUR_STEPS[_tourI];
+  const card=$('tourCard');
+  card.innerHTML=
+    '<div class="tt">'+esc(s.t)+'</div>'+
+    '<div class="bd">'+esc(s.b)+'</div>'+
+    '<div class="ft">'+
+      '<div class="dots">'+TOUR_STEPS.map((_,i)=>'<span class="dot'+(i===_tourI?' on':'')+'"></span>').join('')+'</div>'+
+      '<div class="btns">'+
+        '<button class="skip" onclick="tourSkip()">Skip</button>'+
+        '<button onclick="tourNext()">'+(_tourI<TOUR_STEPS.length-1?'Next':'Got it')+'</button>'+
+      '</div>'+
+    '</div>';
+  card.style.display='flex';
+  card.style.flexDirection='column';
+  positionTour();
+}
+// Places the spotlight ring around this step's target element and the card
+// beside it (below/above/right/left, whichever fits) so the card never
+// covers the thing it's explaining. Falls back to a centered card + full
+// dim when there's no target or nothing fits (e.g. tiny viewport).
+function positionTour(){
+  const s=TOUR_STEPS[_tourI];
+  const card=$('tourCard'), spot=$('tourSpot'), bg=$('tourBg');
+  const target=s.target?s.target():null;
+  const vw=window.innerWidth, vh=window.innerHeight, margin=14, pad=6;
+  if(!target){
+    spot.classList.remove('on');
+    bg.classList.add('dim');
+    card.style.transform='translate(-50%,-50%)';
+    card.style.left='50%'; card.style.top='50%';
+    return;
+  }
+  bg.classList.remove('dim');
+  const r=target.getBoundingClientRect();
+  spot.classList.add('on');
+  spot.style.left=(r.left-pad)+'px';
+  spot.style.top=(r.top-pad)+'px';
+  spot.style.width=(r.width+pad*2)+'px';
+  spot.style.height=(r.height+pad*2)+'px';
+  card.style.transform='none';
+  const cw=card.offsetWidth, ch=card.offsetHeight;
+  let left,top;
+  if(r.bottom+margin+ch<=vh-8){
+    top=r.bottom+margin; left=r.left+r.width/2-cw/2;
+  }else if(r.top-margin-ch>=8){
+    top=r.top-margin-ch; left=r.left+r.width/2-cw/2;
+  }else if(r.right+margin+cw<=vw-8){
+    left=r.right+margin; top=r.top+r.height/2-ch/2;
+  }else if(r.left-margin-cw>=8){
+    left=r.left-margin-cw; top=r.top+r.height/2-ch/2;
+  }else{
+    left=vw/2-cw/2; top=vh/2-ch/2;
+  }
+  card.style.left=Math.min(Math.max(left,8),vw-cw-8)+'px';
+  card.style.top=Math.min(Math.max(top,8),vh-ch-8)+'px';
+}
+function tourNext(){
+  _tourI++;
+  if(_tourI>=TOUR_STEPS.length){ tourSkip(); return; }
+  showTourStep();
+}
+function tourSkip(){
+  $('tourBg').classList.remove('on','dim');
+  $('tourSpot').classList.remove('on');
+  if(_tourResize){ window.removeEventListener('resize',_tourResize); _tourResize=null; }
+  $('tourCard').style.display='none';
+  localStorage.setItem('tactic_seen_help','1');
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -1717,6 +2309,9 @@ function setupCalibration(){
   renderAll();
   layoutMap();
   loadData();
+  checkOfflineSaves();
+  loadVisionSettings();
+  if(!localStorage.getItem('tactic_seen_help')) startTour();
   if(window.ResizeObserver){ new ResizeObserver(requestResize).observe($('mapWrap')); }
   if(CAL) setupCalibration();
   // one-time nudge: the map is landscape, phones usually aren't
@@ -1725,6 +2320,29 @@ function setupCalibration(){
     setTimeout(()=>toast('Tip: rotate your phone for a bigger board.'),900);
   }
 })();
+
+// ── Sidebar tabs + collapse (desktop / iPad only) ──
+// On phones the sidebar is display:contents and these controls are hidden,
+// so the existing bottom-sheet behaviour is untouched.
+function setSbTab(t){
+  const sb=document.getElementById('sidebar'); if(!sb) return;
+  sb.dataset.tab=t;
+  document.querySelectorAll('.sbtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===t));
+}
+document.querySelectorAll('.sbtab').forEach(b=>b.addEventListener('click',()=>setSbTab(b.dataset.tab)));
+function toggleSidebar(){
+  const on=document.body.classList.toggle('sb-collapsed');
+  try{localStorage.setItem('tactic_sb_collapsed',on?'1':'0');}catch(e){}
+  const t=document.getElementById('sbToggle');
+  if(t){t.style.transform=on?'scaleX(-1)':''; t.title=on?'Show the side panel':'Hide the side panel';}
+}
+try{
+  if(localStorage.getItem('tactic_sb_collapsed')==='1'){
+    document.body.classList.add('sb-collapsed');
+    const t=document.getElementById('sbToggle');
+    if(t){t.style.transform='scaleX(-1)'; t.title='Show the side panel';}
+  }
+}catch(e){}
 </script>
 </body>
 </html>
