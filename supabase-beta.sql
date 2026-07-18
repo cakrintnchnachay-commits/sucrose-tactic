@@ -34,6 +34,10 @@ create table org_members (
 create or replace function my_org_id() returns uuid
 language sql stable security definer set search_path = public
 as $$ select org_id from org_members where user_id = auth.uid() $$;
+-- Postgres grants EXECUTE to PUBLIC on new functions by default — lock
+-- this one down to signed-in users only.
+revoke execute on function my_org_id() from public;
+revoke execute on function my_org_id() from anon;
 grant execute on function my_org_id() to authenticated;
 
 create table scenarios (

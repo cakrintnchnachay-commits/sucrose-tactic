@@ -2295,7 +2295,7 @@ async function openLoad(){
       const tag=tagOf(s), rest=parseTag(s.name).rest||s.name;
       const who=byName[s.updated_by];
       return '<div class="scenario-card" data-id="'+s.id+'" data-name="'+esc(s.name.toLowerCase())+'" data-tag="'+esc(tag)+'">'+
-      '<img src="'+(s.preview_image||'')+'" alt="" onerror="this.style.background=\'#111\'"/>'+
+      '<img src="'+esc(/^data:image\//.test(s.preview_image||'')?s.preview_image:'')+'" alt="" onerror="this.style.background=\'#111\'"/>'+
       '<div class="cap"><span class="nmm">'+(tag?'<span class="tag-badge">'+esc(tag)+'</span> ':'')+esc(rest)+'</span>'+
       '<span class="steps">'+steps+' step'+(steps>1?'s':'')+'</span>'+
       '<span class="del" data-del="'+s.id+'" title="'+esc(t('delete'))+'">✕</span></div>'+
