@@ -27,7 +27,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
 <meta name="theme-color" content="#0b0b0d"/>
 <title>Tactic Board — Sucrose</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <!-- Shared site chrome. Loaded BEFORE the inline <style> on purpose: nav.css
      defines its own :root --black/--white, and this page's palette must win. -->
@@ -59,13 +59,13 @@
 html,body{height:100%;margin:0;}
 body{
   background:var(--black); color:var(--white);
-  font-family:'DM Sans',sans-serif; font-size:13px;
+  font-family:'DM Sans','IBM Plex Sans Thai',sans-serif; font-size:13px;
   overflow:hidden; overscroll-behavior:none;
 }
 button{font-family:inherit;}
 
 /* generic button look (from style.css .btn) */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;border:var(--border);background:none;color:var(--white);font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .15s;border-radius:2px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 14px;border:var(--border);background:none;color:var(--white);font-family:'DM Mono','IBM Plex Sans Thai',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .15s;border-radius:2px;}
 .btn:hover{background:var(--grey-2);}
 .btn-sm{padding:7px 11px;font-size:9px;}
 .btn-primary{background:var(--white);color:var(--black);border-color:var(--white);}
@@ -75,9 +75,9 @@ button{font-family:inherit;}
 .icon-btn{width:34px;height:34px;display:inline-flex;align-items:center;justify-content:center;border:var(--border);background:var(--grey-1);color:var(--grey-6);cursor:pointer;border-radius:3px;padding:0;transition:all .15s;flex:0 0 auto;}
 .icon-btn:hover{color:var(--white);background:var(--grey-2);}
 .icon-btn svg{width:17px;height:17px;}
-.section-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--grey-5);padding:16px 14px 8px;}
-.section-label .sub{letter-spacing:1px;font-size:8px;color:var(--grey-4);text-transform:none;margin-left:6px;}
-.note{font-family:'DM Mono',monospace;font-size:10px;color:var(--grey-5);line-height:1.5;}
+.section-label{font-family:'DM Mono','IBM Plex Sans Thai',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--grey-5);padding:16px 14px 8px;}
+.section-label .sub{letter-spacing:1px;font-size:8px;color:var(--grey-4);text-transform:none;margin-left:6px;font-family:'DM Mono','IBM Plex Sans Thai',monospace;}
+.note{font-family:'DM Mono','IBM Plex Sans Thai',monospace;font-size:10px;color:var(--grey-5);line-height:1.5;}
 
 /* ─────────── App shell ─────────── */
 #app{display:flex;flex-direction:column;height:100vh;height:100dvh;}
@@ -145,7 +145,7 @@ body.hide-names .token .lbl{display:none;}
 .sbtab.active{background:var(--panel2);color:var(--ink);}
 .sheet{background:var(--grey-1);display:flex;flex-direction:column;min-height:0;}
 .sheet-head{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:var(--border);flex:0 0 auto;position:relative;}
-.sheet-head .ttl{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--grey-6);}
+.sheet-head .ttl{font-family:'DM Mono','IBM Plex Sans Thai',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--grey-6);}
 .sheet-head .grip{position:absolute;top:6px;left:50%;transform:translateX(-50%);width:36px;height:4px;border-radius:2px;background:var(--grey-3);}
 .sheet-head .x{margin-left:auto;border:none;background:none;width:30px;height:30px;}
 .sheet-body{flex:1 1 auto;overflow-y:auto;min-height:0;padding-bottom:14px;-webkit-overflow-scrolling:touch;}
@@ -259,7 +259,7 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
 .tool-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:40px;padding:5px 4px 4px;border:var(--border);background:none;color:var(--grey-5);cursor:pointer;border-radius:3px;transition:all .12s;flex:0 0 auto;}
 @media(min-width:900px){.tool-btn{min-width:48px;}#toolbar{gap:6px;padding:7px 12px;}}
 .tool-btn svg{width:17px;height:17px;}
-.tool-btn span{font-family:'DM Mono',monospace;font-size:7px;letter-spacing:1px;text-transform:uppercase;}
+.tool-btn span{font-family:'DM Mono','IBM Plex Sans Thai',monospace;font-size:7px;letter-spacing:1px;text-transform:uppercase;}
 .tool-btn:hover{color:var(--white);}
 .tool-btn.active{color:var(--accent);border-color:rgba(68,255,136,.55);background:rgba(68,255,136,.06);}
 #toolbar .sep{width:1px;background:var(--grey-3);margin:4px 3px;}
@@ -321,6 +321,7 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
 .tour-card .btns{display:flex;gap:8px;}
 .tour-card button{background:var(--accent);color:#0a0a0a;border:none;border-radius:2px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;}
 .tour-card button.skip{background:none;color:var(--grey-5);padding:6px 4px;}
+:root[lang=th] .btn,:root[lang=th] .section-label,:root[lang=th] .tool-btn span,:root[lang=th] .sheet-head .ttl{letter-spacing:0.3px;}
 </style>
 </head>
 <body class="tool-move">
@@ -328,18 +329,19 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
 
   <!-- TOP BAR -->
   <header id="topbar">
-    <a class="back" href="index.html" title="Back to app" data-icon="back"></a>
+    <a class="back" href="index.html" data-i18n-title="tt-back" title="Back to app" data-icon="back"></a>
     <div class="tb-title">
       <h1>TACTIC <span class="accent">BOARD</span></h1>
-      <span class="tb-sub" id="orgLabel">Sucrose Tactic · beta</span>
+      <span class="tb-sub" id="orgLabel">Sucrose Tactic · beta · by Coach Chakarin</span>
     </div>
     <div class="tb-actions">
-      <button class="btn btn-sm desktop-only" id="btnLogout" onclick="doLogout()" style="display:none;">Log out</button>
-      <button class="btn btn-sm desktop-only" onclick="exportPNG()" title="Export the current step as a PNG image">Export PNG</button>
-      <button class="btn btn-sm btn-primary" id="btnSave" onclick="openSave()" title="Save scenario (Ctrl+S)">Save</button>
-      <button class="icon-btn" onclick="startTour()" title="Show the quick tour" data-icon="help"></button>
-      <button class="icon-btn desktop-only" id="sbToggle" onclick="toggleSidebar()" title="Hide the side panel"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5L7 10l5.5 5.5"/><path d="M4 4v12" stroke-opacity=".45"/></svg></button>
-      <button class="icon-btn mobile-only" onclick="openSheet('sheetBoard')" title="Board menu" data-icon="menu"></button>
+      <button class="btn btn-sm" id="btnLang" onclick="setLang(LANG==='th'?'en':'th')" title="ภาษา / Language">ไทย</button>
+      <button class="btn btn-sm desktop-only" id="btnLogout" data-i18n="logout" onclick="doLogout()" style="display:none;">Log out</button>
+      <button class="btn btn-sm desktop-only" onclick="exportPNG()" data-i18n-title="tt-export-png" title="Export the current step as a PNG image"><span data-i18n="export-png">Export PNG</span></button>
+      <button class="btn btn-sm btn-primary" id="btnSave" onclick="openSave()" data-i18n-title="tt-save" title="Save scenario (Ctrl+S)"><span data-i18n="save">Save</span></button>
+      <button class="icon-btn" onclick="startTour()" data-i18n-title="tt-tour" title="Show the quick tour" data-icon="help"></button>
+      <button class="icon-btn desktop-only" id="sbToggle" onclick="toggleSidebar()" data-i18n-title="tt-hide-panel" title="Hide the side panel"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12.5 4.5L7 10l5.5 5.5"/><path d="M4 4v12" stroke-opacity=".45"/></svg></button>
+      <button class="icon-btn mobile-only" onclick="openSheet('sheetBoard')" data-i18n-title="tt-board-menu" title="Board menu" data-icon="menu"></button>
     </div>
   </header>
 
@@ -350,26 +352,26 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
          sheets stay independent bottom sheets exactly as before. -->
     <div id="sidebar" data-tab="heroes">
       <div id="sbTabs" class="desktop-only">
-        <button class="sbtab active" data-tab="heroes">Heroes</button>
-        <button class="sbtab" data-tab="board">Board</button>
+        <button class="sbtab active" data-tab="heroes" data-i18n="heroes-tab">Heroes</button>
+        <button class="sbtab" data-tab="board" data-i18n="board-tab">Board</button>
       </div>
 
     <!-- HEROES — bottom sheet on mobile, sidebar tab on desktop -->
     <aside class="sheet" id="sheetHeroes">
       <div class="sheet-head">
         <span class="grip mobile-only"></span>
-        <span class="ttl">Heroes</span>
+        <span class="ttl" data-i18n="heroes-tab">Heroes</span>
         <button class="icon-btn x mobile-only" onclick="closeSheets()" data-icon="close"></button>
       </div>
       <div class="sheet-body">
         <div class="pos-tabs" id="posTabs"></div>
-        <input class="hero-search" id="heroSearch" placeholder="Search hero…" oninput="renderHeroGrid()"/>
+        <input class="hero-search" id="heroSearch" data-i18n-ph="search-hero-ph" placeholder="Search hero…" oninput="renderHeroGrid()"/>
         <div id="recentWrap"></div>
-        <div class="section-label" id="allLabel">All heroes</div>
+        <div class="section-label" id="allLabel" data-i18n="all-heroes">All heroes</div>
         <div class="hero-grid" id="heroGrid"></div>
-        <div class="section-label">Bench <span class="sub">tap a token, then tap the map</span></div>
-        <div class="bench-row blue"><span class="side-lbl">Blue</span><div class="bench-tokens" id="benchBlue"></div></div>
-        <div class="bench-row red"><span class="side-lbl">Red</span><div class="bench-tokens" id="benchRed"></div></div>
+        <div class="section-label"><span data-i18n="bench">Bench</span> <span class="sub" data-i18n="bench-sub">tap a token, then tap the map</span></div>
+        <div class="bench-row blue"><span class="side-lbl" data-i18n="side-blue">Blue</span><div class="bench-tokens" id="benchBlue"></div></div>
+        <div class="bench-row red"><span class="side-lbl" data-i18n="side-red">Red</span><div class="bench-tokens" id="benchRed"></div></div>
       </div>
     </aside>
 
@@ -377,50 +379,50 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
     <aside class="sheet" id="sheetBoard">
       <div class="sheet-head">
         <span class="grip mobile-only"></span>
-        <span class="ttl">Board</span>
+        <span class="ttl" data-i18n="board-tab">Board</span>
         <button class="icon-btn x mobile-only" onclick="closeSheets()" data-icon="close"></button>
       </div>
       <div class="sheet-body">
         <div class="board-actions">
-          <button class="btn btn-sm" onclick="openLoad()">Load</button>
-          <button class="btn btn-sm" onclick="exportPNG()">Export PNG</button>
+          <button class="btn btn-sm" onclick="openLoad()" data-i18n="load">Load</button>
+          <button class="btn btn-sm" onclick="exportPNG()" data-i18n="export-png">Export PNG</button>
         </div>
-        <div class="section-label">Notes <span class="sub">saved with the scenario</span></div>
-        <textarea id="notesBox" class="notes" placeholder="Play notes — win condition, timings, who starts the engage…"></textarea>
-        <div class="section-label">Objectives</div>
+        <div class="section-label"><span data-i18n="notes">Notes</span> <span class="sub" data-i18n="notes-sub">saved with the scenario</span></div>
+        <textarea id="notesBox" class="notes" data-i18n-ph="notes-ph" placeholder="Play notes — win condition, timings, who starts the engage…"></textarea>
+        <div class="section-label" data-i18n="objectives">Objectives</div>
         <div class="obj-toggles">
-          <button class="toggle-btn on" id="tglDragon" onclick="toggleObjective('dragon')"><span class="dot"></span>Dragon</button>
-          <button class="toggle-btn on" id="tglSlayer" onclick="toggleObjective('slayer')"><span class="dot"></span>Slayer</button>
+          <button class="toggle-btn on" id="tglDragon" onclick="toggleObjective('dragon')"><span class="dot"></span><span data-i18n="dragon">Dragon</span></button>
+          <button class="toggle-btn on" id="tglSlayer" onclick="toggleObjective('slayer')"><span class="dot"></span><span data-i18n="slayer">Slayer</span></button>
         </div>
-        <div class="section-label">Place on map <span class="sub">tap, then tap the map</span></div>
+        <div class="section-label"><span data-i18n="place-on-map">Place on map</span> <span class="sub" data-i18n="place-on-map-sub">tap, then tap the map</span></div>
         <div class="src-grid">
-          <button class="src wblue" data-place="ward:blue"><span class="vis" data-icon="ward"></span>Blue ward</button>
-          <button class="src wred" data-place="ward:red"><span class="vis" data-icon="ward"></span>Red ward</button>
-          <button class="src" data-place="summon:vanguard"><span class="vis" id="vgVis"></span>Vanguard</button>
-          <button class="src" data-place="summon:darkslayer"><span class="vis" id="dsVis"></span>Darkslayer</button>
+          <button class="src wblue" data-place="ward:blue"><span class="vis" data-icon="ward"></span><span data-i18n="blue-ward">Blue ward</span></button>
+          <button class="src wred" data-place="ward:red"><span class="vis" data-icon="ward"></span><span data-i18n="red-ward">Red ward</span></button>
+          <button class="src" data-place="summon:vanguard"><span class="vis" id="vgVis"></span><span data-i18n="vanguard">Vanguard</span></button>
+          <button class="src" data-place="summon:darkslayer"><span class="vis" id="dsVis"></span><span data-i18n="darkslayer">Darkslayer</span></button>
         </div>
-        <div class="section-label">Vision ranges <span class="sub">% of map side &middot; synced to all devices</span></div>
+        <div class="section-label"><span data-i18n="vision-ranges">Vision ranges</span> <span class="sub" data-i18n="vision-ranges-sub">% of map side &middot; synced to all devices</span></div>
         <div class="size-row">
-          <label>Hero</label>
+          <label data-i18n="hero">Hero</label>
           <div class="rr"><input type="range" id="visHero" min="50" max="200" oninput="setVisionR('hero',this.value)"/><span class="val" id="visHeroVal"></span></div>
         </div>
         <div class="size-row">
-          <label>Tower</label>
+          <label data-i18n="tower">Tower</label>
           <div class="rr"><input type="range" id="visTower" min="50" max="200" oninput="setVisionR('tower',this.value)"/><span class="val" id="visTowerVal"></span></div>
         </div>
         <div class="size-row">
-          <label>Ward</label>
+          <label data-i18n="ward">Ward</label>
           <div class="rr"><input type="range" id="visWard" min="50" max="200" oninput="setVisionR('ward',this.value)"/><span class="val" id="visWardVal"></span></div>
         </div>
         <div class="size-row">
           <div class="rr">
-            <button class="btn btn-sm" onclick="resetVisionR()">Reset defaults</button>
+            <button class="btn btn-sm" onclick="resetVisionR()" data-i18n="reset-defaults">Reset defaults</button>
             <span class="val" id="visSyncState"></span>
           </div>
         </div>
-        <div class="section-label">Display</div>
+        <div class="section-label" data-i18n="display">Display</div>
         <div class="size-row">
-          <label>Token size</label>
+          <label data-i18n="token-size">Token size</label>
           <div class="rr">
             <input type="range" id="tokSize" min="24" max="80" value="42" oninput="setTokenSize(this.value)"/>
             <span class="val" id="tokSizeVal">42px</span>
@@ -428,15 +430,15 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
         </div>
         <div class="size-row">
           <div class="rr">
-            <button class="toggle-btn on" id="tglNames" onclick="toggleNames()"><span class="dot"></span>Hero names</button>
+            <button class="toggle-btn on" id="tglNames" onclick="toggleNames()"><span class="dot"></span><span data-i18n="hero-names">Hero names</span></button>
           </div>
         </div>
         <div class="size-row">
           <div class="rr">
-            <button class="toggle-btn" id="tglOnion" onclick="toggleOnionSkin()" title="Ghost the previous step's hero positions so you can see what moved"><span class="dot"></span>Onion skin</button>
+            <button class="toggle-btn" id="tglOnion" onclick="toggleOnionSkin()" data-i18n-title="tt-onion-skin" title="Ghost the previous step's hero positions so you can see what moved"><span class="dot"></span><span data-i18n="onion-skin">Onion skin</span></button>
           </div>
         </div>
-        <div class="section-label">Towers <span class="sub">tap a lane name to toggle the row</span></div>
+        <div class="section-label"><span data-i18n="towers">Towers</span> <span class="sub" data-i18n="towers-sub">tap a lane name to toggle the row</span></div>
         <div id="towersWrap"></div>
       </div>
     </aside>
@@ -452,12 +454,12 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
         <canvas id="drawCanvas"></canvas>
       </div>
       <div id="zoomCtrl">
-        <button class="icon-btn" onclick="zoomBy(1.35)" title="Zoom in" data-icon="plus"></button>
-        <button class="icon-btn" onclick="zoomBy(1/1.35)" title="Zoom out" data-icon="minus"></button>
+        <button class="icon-btn" onclick="zoomBy(1.35)" data-i18n-title="tt-zoom-in" title="Zoom in" data-icon="plus"></button>
+        <button class="icon-btn" onclick="zoomBy(1/1.35)" data-i18n-title="tt-zoom-out" title="Zoom out" data-icon="minus"></button>
       </div>
       <div id="pendingPill" style="display:none;">
         <span id="pendingTxt"></span>
-        <button onclick="cancelPending()">Cancel</button>
+        <button onclick="cancelPending()" data-i18n="cancel">Cancel</button>
       </div>
     </main>
 
@@ -465,33 +467,33 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
 
   <!-- STEP STRIP -->
   <div id="frameStrip">
-    <span class="fs-label">Steps</span>
+    <span class="fs-label" data-i18n="steps">Steps</span>
     <div id="frameChips"></div>
-    <button class="icon-btn" onclick="addFrame()" title="Duplicate current step — then move pieces to build the play" data-icon="plus"></button>
-    <button class="icon-btn" id="btnPlay" onclick="togglePlay()" title="Play the steps" data-icon="play"></button>
+    <button class="icon-btn" onclick="addFrame()" data-i18n-title="tt-add-step" title="Duplicate current step — then move pieces to build the play" data-icon="plus"></button>
+    <button class="icon-btn" id="btnPlay" onclick="togglePlay()" data-i18n-title="tt-play-steps" title="Play the steps" data-icon="play"></button>
   </div>
 
   <!-- CONTEXT BAR (visible for draw tools) -->
   <div id="ctxBar">
-    <span id="ctxColor"><span class="lab">Color</span><span id="swatches"></span></span>
-    <span id="ctxSize"><span class="lab">Size</span><input type="range" min="2" max="30" value="5" id="penSize"/><span class="val" id="penSizeVal">5</span></span>
-    <button class="btn btn-sm btn-danger" id="ctxClear" onclick="clearDrawing()">Clear</button>
+    <span id="ctxColor"><span class="lab" data-i18n="color">Color</span><span id="swatches"></span></span>
+    <span id="ctxSize"><span class="lab" data-i18n="size">Size</span><input type="range" min="2" max="30" value="5" id="penSize"/><span class="val" id="penSizeVal">5</span></span>
+    <button class="btn btn-sm btn-danger" id="ctxClear" onclick="clearDrawing()" data-i18n="clear">Clear</button>
   </div>
 
   <!-- TOOLBAR -->
   <nav id="toolbar">
-    <button class="tool-btn active" data-tool="move" data-icon="move" title="Move pieces (V)"><span>Move</span></button>
-    <button class="tool-btn" data-tool="pen" data-icon="pen" title="Freehand pen (P)"><span>Pen</span></button>
-    <button class="tool-btn" data-tool="arrow" data-icon="arrow" title="Drag an arrow (A)"><span>Arrow</span></button>
-    <button class="tool-btn" data-tool="zone" data-icon="zone" title="Drag a zone (Z)"><span>Zone</span></button>
-    <button class="tool-btn" data-tool="erase" data-icon="erase" title="Erase pen strokes (E)"><span>Erase</span></button>
+    <button class="tool-btn active" data-tool="move" data-icon="move" data-i18n-title="tt-move" title="Move pieces (V)"><span data-i18n="move">Move</span></button>
+    <button class="tool-btn" data-tool="pen" data-icon="pen" data-i18n-title="tt-pen" title="Freehand pen (P)"><span data-i18n="pen">Pen</span></button>
+    <button class="tool-btn" data-tool="arrow" data-icon="arrow" data-i18n-title="tt-arrow" title="Drag an arrow (A)"><span data-i18n="arrow">Arrow</span></button>
+    <button class="tool-btn" data-tool="zone" data-icon="zone" data-i18n-title="tt-zone" title="Drag a zone (Z)"><span data-i18n="zone">Zone</span></button>
+    <button class="tool-btn" data-tool="erase" data-icon="erase" data-i18n-title="tt-erase" title="Erase pen strokes (E)"><span data-i18n="erase">Erase</span></button>
     <span class="sep"></span>
-    <button class="tool-btn" id="btnVisionBlue" onclick="toggleVision('blue')" data-icon="ward" title="Show blue hero &amp; tower sight ranges"><span>Vis. Blue</span></button>
-    <button class="tool-btn" id="btnVisionRed" onclick="toggleVision('red')" data-icon="ward" title="Show red hero &amp; tower sight ranges"><span>Vis. Red</span></button>
-    <button class="tool-btn" onclick="doUndo()" data-icon="undo" title="Undo (Ctrl+Z)"><span>Undo</span></button>
-    <button class="tool-btn" onclick="doRedo()" data-icon="redo" title="Redo (Ctrl+Shift+Z)"><span>Redo</span></button>
+    <button class="tool-btn" id="btnVisionBlue" onclick="toggleVision('blue')" data-icon="ward" data-i18n-title="tt-vis-blue" title="Show blue hero &amp; tower sight ranges"><span data-i18n="vis-blue">Vis. Blue</span></button>
+    <button class="tool-btn" id="btnVisionRed" onclick="toggleVision('red')" data-icon="ward" data-i18n-title="tt-vis-red" title="Show red hero &amp; tower sight ranges"><span data-i18n="vis-red">Vis. Red</span></button>
+    <button class="tool-btn" onclick="doUndo()" data-icon="undo" data-i18n-title="tt-undo" title="Undo (Ctrl+Z)"><span data-i18n="undo">Undo</span></button>
+    <button class="tool-btn" onclick="doRedo()" data-icon="redo" data-i18n-title="tt-redo" title="Redo (Ctrl+Shift+Z)"><span data-i18n="redo">Redo</span></button>
     <span class="spacer"></span>
-    <button class="tool-btn mobile-only" onclick="openSheet('sheetHeroes')" data-icon="heroes" title="Open hero picker"><span>Heroes</span></button>
+    <button class="tool-btn mobile-only" onclick="openSheet('sheetHeroes')" data-icon="heroes" data-i18n-title="tt-open-heroes" title="Open hero picker"><span data-i18n="heroes-tab">Heroes</span></button>
   </nav>
 </div>
 <div id="backdrop" onclick="closeSheets()"></div>
@@ -518,7 +520,7 @@ const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL,SUPABASE_
 async function requireSession(){
   if(!sb)return null;
   const {data:{session}}=await sb.auth.getSession();
-  if(!session){ toast('Sign in to save and load — this beta is invite-only.',true); return null; }
+  if(!session){ toast(t('sign-in-required'),true); return null; }
   return session;
 }
 
@@ -537,7 +539,7 @@ async function initAuth(){
     if(data){
       ME.orgId=data.org_id;
       ME.name=data.display_name;
-      if(data.orgs&&data.orgs.name) $('orgLabel').textContent=data.orgs.name+' · beta';
+      if(data.orgs&&data.orgs.name) $('orgLabel').textContent=data.orgs.name+' · beta · by Coach Chakarin';
       // first login: default the display name to the email's local part
       if(!ME.name){
         ME.name=(session.user.email||'').split('@')[0]||'member';
@@ -545,10 +547,10 @@ async function initAuth(){
       }
     }
   }catch(e){ console.warn('org lookup failed',e); }
-  if(!ME.orgId) toast('Your account isn\'t attached to a team yet — saving is disabled until it is.',true);
+  if(!ME.orgId) toast(t('no-team-yet'),true);
 }
 async function doLogout(){
-  if(dirty&&!confirm('You have unsaved changes — log out anyway?'))return;
+  if(dirty&&!confirm(t('confirm-logout')))return;
   dirty=false;
   if(sb)await sb.auth.signOut();
   location.replace('index.html');
@@ -696,6 +698,156 @@ const VISION_ROW='__vision_settings__';          // reserved scenario name
 // show just one team's sight range at a time.
 const vision={on:{blue:false,red:false},r:Object.assign({},VISION_DEFAULTS)};
 const CAL=new URLSearchParams(location.search).has('cal');
+
+// ════════════════════════════════════════════════════════════════
+//  I18N — TH/EN toggle. English is the fallback for any missing key.
+// ════════════════════════════════════════════════════════════════
+const STR={
+  'logout':{en:'Log out',th:'ออกจากระบบ'},
+  'export-png':{en:'Export PNG',th:'ส่งออก PNG'},
+  'tt-export-png':{en:'Export the current step as a PNG image',th:'ส่งออกสเต็ปนี้เป็นรูป PNG'},
+  'save':{en:'Save',th:'เซฟ'},
+  'tt-save':{en:'Save scenario (Ctrl+S)',th:'เซฟบอร์ด (Ctrl+S)'},
+  'tt-tour':{en:'Show the quick tour',th:'ดูวิธีใช้งานแบบเร็ว'},
+  'tt-hide-panel':{en:'Hide the side panel',th:'ซ่อนแผงด้านข้าง'},
+  'tt-show-panel':{en:'Show the side panel',th:'แสดงแผงด้านข้าง'},
+  'tt-board-menu':{en:'Board menu',th:'เมนูบอร์ด'},
+  'tt-back':{en:'Back to app',th:'กลับไปหน้าแอป'},
+  'heroes-tab':{en:'Heroes',th:'ฮีโร่'},
+  'board-tab':{en:'Board',th:'บอร์ด'},
+  'search-hero-ph':{en:'Search hero…',th:'ค้นหาฮีโร่…'},
+  'all-heroes':{en:'All heroes',th:'ฮีโร่ทั้งหมด'},
+  'recent':{en:'Recent',th:'ล่าสุด'},
+  'no-heroes-match':{en:'No heroes match.',th:'ไม่พบฮีโร่ที่ตรงกัน'},
+  'bench':{en:'Bench',th:'ตัวสำรอง'},
+  'bench-sub':{en:'tap a token, then tap the map',th:'แตะตัวละคร แล้วแตะบนแผนที่'},
+  'side-blue':{en:'Blue',th:'น้ำเงิน'},
+  'side-red':{en:'Red',th:'แดง'},
+  'bench-empty':{en:'empty',th:'ว่าง'},
+  'bench-team':{en:'Bench {side}',th:'สำรอง {side}'},
+  'tap-place':{en:'Tap the map to place {label}',th:'แตะบนแผนที่เพื่อวาง {label}'},
+  'side-name':{en:'{side} side',th:'ฝั่ง{side}'},
+  'load':{en:'Load',th:'โหลด'},
+  'notes':{en:'Notes',th:'โน้ต'},
+  'notes-sub':{en:'saved with the scenario',th:'เซฟไว้พร้อมบอร์ด'},
+  'notes-ph':{en:'Play notes — win condition, timings, who starts the engage…',th:'โน้ตแผนการเล่น — เงื่อนไขชนะ จังหวะ ใครเปิดเกม…'},
+  'objectives':{en:'Objectives',th:'ออบเจกทีฟ'},
+  'dragon':{en:'Dragon',th:'ดราก้อน'},
+  'slayer':{en:'Slayer',th:'สเลเยอร์'},
+  'place-on-map':{en:'Place on map',th:'วางบนแผนที่'},
+  'place-on-map-sub':{en:'tap, then tap the map',th:'แตะ แล้วแตะบนแผนที่'},
+  'blue-ward':{en:'Blue ward',th:'วอร์ดน้ำเงิน'},
+  'red-ward':{en:'Red ward',th:'วอร์ดแดง'},
+  'vanguard':{en:'Vanguard',th:'แวนการ์ด'},
+  'darkslayer':{en:'Darkslayer',th:'ดาร์คสเลเยอร์'},
+  'vision-ranges':{en:'Vision ranges',th:'ระยะมองเห็น'},
+  'vision-ranges-sub':{en:'% of map side · synced to all devices',th:'% ของด้านแผนที่ · ซิงก์ทุกอุปกรณ์'},
+  'hero':{en:'Hero',th:'ฮีโร่'},
+  'tower':{en:'Tower',th:'ป้อม'},
+  'ward':{en:'Ward',th:'วอร์ด'},
+  'reset-defaults':{en:'Reset defaults',th:'รีเซ็ตค่าเริ่มต้น'},
+  'display':{en:'Display',th:'การแสดงผล'},
+  'token-size':{en:'Token size',th:'ขนาดตัวละคร'},
+  'hero-names':{en:'Hero names',th:'ชื่อฮีโร่'},
+  'onion-skin':{en:'Onion skin',th:'เงาสเต็ปก่อนหน้า'},
+  'tt-onion-skin':{en:'Ghost the previous step\'s hero positions so you can see what moved',th:'แสดงเงาตำแหน่งฮีโร่จากสเต็ปก่อนหน้า เพื่อดูว่ามีอะไรขยับ'},
+  'towers':{en:'Towers',th:'ป้อมปราการ'},
+  'towers-sub':{en:'tap a lane name to toggle the row',th:'แตะชื่อเลนเพื่อสลับทั้งแถว'},
+  'tt-zoom-in':{en:'Zoom in',th:'ซูมเข้า'},
+  'tt-zoom-out':{en:'Zoom out',th:'ซูมออก'},
+  'cancel':{en:'Cancel',th:'ยกเลิก'},
+  'steps':{en:'Steps',th:'สเต็ป'},
+  'tt-add-step':{en:'Duplicate current step — then move pieces to build the play',th:'ทำซ้ำสเต็ปนี้ แล้วขยับตัวละครเพื่อสร้างแผนการเล่น'},
+  'tt-play-steps':{en:'Play the steps',th:'เล่นสเต็ปทั้งหมด'},
+  'color':{en:'Color',th:'สี'},
+  'size':{en:'Size',th:'ขนาด'},
+  'clear':{en:'Clear',th:'ล้าง'},
+  'move':{en:'Move',th:'ย้าย'},
+  'tt-move':{en:'Move pieces (V)',th:'ย้ายตัวละคร (V)'},
+  'pen':{en:'Pen',th:'ปากกา'},
+  'tt-pen':{en:'Freehand pen (P)',th:'ปากกาวาดอิสระ (P)'},
+  'arrow':{en:'Arrow',th:'ลูกศร'},
+  'tt-arrow':{en:'Drag an arrow (A)',th:'ลากลูกศร (A)'},
+  'zone':{en:'Zone',th:'โซน'},
+  'tt-zone':{en:'Drag a zone (Z)',th:'ลากโซน (Z)'},
+  'erase':{en:'Erase',th:'ลบ'},
+  'tt-erase':{en:'Erase pen strokes (E)',th:'ลบเส้นปากกา (E)'},
+  'vis-blue':{en:'Vis. Blue',th:'มองเห็น น้ำเงิน'},
+  'tt-vis-blue':{en:'Show blue hero & tower sight ranges',th:'แสดงระยะมองเห็นฝั่งน้ำเงิน'},
+  'vis-red':{en:'Vis. Red',th:'มองเห็น แดง'},
+  'tt-vis-red':{en:'Show red hero & tower sight ranges',th:'แสดงระยะมองเห็นฝั่งแดง'},
+  'undo':{en:'Undo',th:'ย้อนกลับ'},
+  'tt-undo':{en:'Undo (Ctrl+Z)',th:'ย้อนกลับ (Ctrl+Z)'},
+  'redo':{en:'Redo',th:'ทำซ้ำ'},
+  'tt-redo':{en:'Redo (Ctrl+Shift+Z)',th:'ทำซ้ำ (Ctrl+Shift+Z)'},
+  'tt-open-heroes':{en:'Open hero picker',th:'เปิดตัวเลือกฮีโร่'},
+  'tt-remove-bench':{en:'Remove from bench',th:'เอาออกจากตัวสำรอง'},
+  'tap-then-map':{en:'Tap, then tap the map',th:'แตะ แล้วแตะบนแผนที่'},
+  'sign-in-required':{en:'Sign in to save and load — this beta is invite-only.',th:'ล็อกอินก่อนเพื่อเซฟและโหลด — เบต้านี้ต้องได้รับเชิญเท่านั้น'},
+  'no-team-yet':{en:'Your account isn\'t attached to a team yet — saving is disabled until it is.',th:'บัญชีของคุณยังไม่ได้ผูกกับทีม — จะเซฟไม่ได้จนกว่าจะผูกทีมแล้ว'},
+  'confirm-logout':{en:'You have unsaved changes — log out anyway?',th:'มีการเปลี่ยนแปลงที่ยังไม่ได้เซฟ — ออกจากระบบเลยไหม?'},
+  'placed-drag':{en:'{name} placed — drag it into position.',th:'วาง {name} แล้ว — ลากไปยังตำแหน่งที่ต้องการ'},
+  'remove-from-bench':{en:'Remove from bench',th:'เอาออกจากตัวสำรอง'},
+  'switch-to':{en:'Switch to {side}',th:'สลับไปฝั่ง {side}'},
+  'to-bench':{en:'To bench',th:'ไปตัวสำรอง'},
+  'remove':{en:'Remove',th:'ลบออก'},
+  'show-vision-range':{en:'Show vision range',th:'แสดงระยะมองเห็น'},
+  'hide-vision-range':{en:'Hide vision range',th:'ซ่อนระยะมองเห็น'},
+  'delete':{en:'Delete',th:'ลบ'},
+  'step-n-added':{en:'Step {n} added — move pieces to build the play.',th:'เพิ่มสเต็ป {n} แล้ว — ขยับตัวละครเพื่อสร้างแผนการเล่น'},
+  'duplicate-step':{en:'Duplicate step {n}',th:'ทำซ้ำสเต็ป {n}'},
+  'move-left':{en:'Move left',th:'ย้ายไปทางซ้าย'},
+  'move-right':{en:'Move right',th:'ย้ายไปทางขวา'},
+  'clear-drawings-step':{en:'Clear drawings on this step',th:'ล้างภาพวาดในสเต็ปนี้'},
+  'delete-step':{en:'Delete step {n}',th:'ลบสเต็ป {n}'},
+  'step-n':{en:'Step {n}',th:'สเต็ป {n}'},
+  'step-n-options':{en:'Step {n} — hold or right-click for options',th:'สเต็ป {n} — กดค้างหรือคลิกขวาเพื่อดูตัวเลือก'},
+  'add-second-step':{en:'Add a second step with + to play a sequence.',th:'เพิ่มสเต็ปที่สองด้วยปุ่ม + เพื่อเล่นเป็นลำดับ'},
+  'export-failed':{en:'Export failed — try again.',th:'ส่งออกไม่สำเร็จ — ลองใหม่อีกครั้ง'},
+  'map-not-loaded':{en:'Map image not loaded yet — try again in a moment.',th:'ยังโหลดรูปแผนที่ไม่เสร็จ — รอสักครู่แล้วลองใหม่'},
+  'building-image':{en:'Building image…',th:'กำลังสร้างรูปภาพ…'},
+  'exported-name':{en:'Exported "{name}.png"',th:'ส่งออก "{name}.png" แล้ว'},
+  'offline-restore-prompt':{en:'{n} local save{s} saved while offline — restore the latest?',th:'มี {n} รายการเซฟออฟไลน์{s} — กู้คืนรายการล่าสุดไหม?'},
+  'restore':{en:'Restore',th:'กู้คืน'},
+  'restored-name':{en:'Restored "{name}" — Save again once you\'re online to sync it.',th:'กู้คืน "{name}" แล้ว — เซฟอีกครั้งตอนออนไลน์เพื่อซิงก์ข้อมูล'},
+  'supabase-not-loaded':{en:'Supabase library not loaded.',th:'โหลดไลบรารี Supabase ไม่สำเร็จ'},
+  'save-scenario':{en:'Save scenario',th:'เซฟบอร์ด'},
+  'scenario-name':{en:'Scenario name',th:'ชื่อบอร์ด'},
+  'scenario-name-ph':{en:'e.g. Dragon setup vs Team X',th:'เช่น เซ็ตอัพดราก้อน vs ทีม X'},
+  'save-overwrite-note':{en:'Saving with an existing name overwrites that scenario. {n} step{s} will be saved.',th:'เซฟด้วยชื่อที่มีอยู่แล้วจะเขียนทับบอร์ดเดิม จะเซฟทั้งหมด {n} สเต็ป{s}'},
+  'name-reserved':{en:'That name is reserved.',th:'ชื่อนี้ถูกสงวนไว้แล้ว'},
+  'ask-beta-admin':{en:'Your account isn\'t attached to a team yet — ask the beta admin.',th:'บัญชีของคุณยังไม่ได้ผูกกับทีม — ติดต่อแอดมินเบต้า'},
+  'offline-saved':{en:'Offline — saved on this device. Re-save once you\'re back online.',th:'ออฟไลน์ — เซฟไว้ในเครื่องนี้แล้ว เซฟใหม่อีกครั้งเมื่อออนไลน์'},
+  'saving':{en:'Saving…',th:'กำลังเซฟ…'},
+  'save-server-failed':{en:'Couldn\'t reach the server — saved on this device instead.',th:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — เซฟไว้ในเครื่องนี้แทน'},
+  'saved-name':{en:'Saved "{name}"',th:'เซฟ "{name}" แล้ว'},
+  'load-scenario':{en:'Load scenario',th:'โหลดบอร์ด'},
+  'no-saved-scenarios':{en:'No saved scenarios yet.',th:'ยังไม่มีบอร์ดที่เซฟไว้'},
+  'search-scenarios-ph':{en:'Search scenarios…',th:'ค้นหาบอร์ด…'},
+  'no-scenarios-match':{en:'No scenarios match.',th:'ไม่พบบอร์ดที่ตรงกัน'},
+  'by-name':{en:'by {name}',th:'โดย {name}'},
+  'load-failed':{en:'Load failed: {msg}',th:'โหลดไม่สำเร็จ: {msg}'},
+  'loaded-name':{en:'Loaded "{name}"',th:'โหลด "{name}" แล้ว'},
+  'confirm-delete-scenario':{en:'Delete this scenario?',th:'ลบบอร์ดนี้เลยไหม?'},
+  'tip-rotate':{en:'Tip: rotate your phone for a bigger board.',th:'เคล็ดลับ: หมุนมือถือแนวนอนเพื่อบอร์ดที่ใหญ่ขึ้น'},
+  'tour-1-t':{en:'Pick heroes here',th:'เลือกฮีโร่ที่นี่'},
+  'tour-1-b':{en:'Open the Heroes panel to search and tap a hero, then tap the map to place it.',th:'เปิดแผงฮีโร่เพื่อค้นหาและแตะเลือกฮีโร่ แล้วแตะบนแผนที่เพื่อวาง'},
+  'tour-2-t':{en:'Drag pieces around',th:'ลากตัวละครไปมา'},
+  'tour-2-b':{en:'Heroes, wards and objectives can be dragged straight on the map with the Move tool.',th:'ฮีโร่ วอร์ด และออบเจกทีฟลากได้ตรงบนแผนที่ด้วยเครื่องมือ Move'},
+  'tour-3-t':{en:'Steps build a play',th:'สเต็ปสร้างแผนการเล่น'},
+  'tour-3-b':{en:'Each "step" chip at the bottom is a snapshot. Add steps and move pieces between them to animate a play.',th:'แต่ละสเต็ปด้านล่างคือภาพสแนปช็อต เพิ่มสเต็ปแล้วขยับตัวละครเพื่อทำแอนิเมชันแผนการเล่น'},
+  'tour-4-t':{en:'Save your scenario',th:'เซฟบอร์ดของคุณ'},
+  'tour-4-b':{en:'Hit Save any time to store the board. Load brings back any saved scenario later.',th:'กด Save เมื่อไหร่ก็ได้เพื่อเก็บบอร์ดไว้ ส่วน Load จะดึงบอร์ดที่เซฟไว้กลับมา'},
+  'skip':{en:'Skip',th:'ข้าม'},
+  'next':{en:'Next',th:'ถัดไป'},
+  'got-it':{en:'Got it',th:'เข้าใจแล้ว'},
+};
+let LANG=localStorage.getItem('tactic_lang')||'th';
+function t(k){const s=STR[k];return s?(s[LANG]||s.en):k;}
+function tf(k,vars){let s=t(k);Object.keys(vars||{}).forEach(v=>{s=s.split('{'+v+'}').join(vars[v]);});return s;}
+function setLang(l){LANG=l;localStorage.setItem('tactic_lang',l);document.documentElement.lang=LANG;applyI18n();renderAll();syncLangBtn();}
+function syncLangBtn(){const b=$('btnLang');if(b)b.textContent=LANG==='th'?'EN':'ไทย';}
+function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=t(el.dataset.i18nPh);});document.querySelectorAll('[data-i18n-title]').forEach(el=>{el.title=t(el.dataset.i18nTitle);});}
 
 // ════════════════════════════════════════════════════════════════
 //  ICONS  (inline SVG, stroke = currentColor)
@@ -894,12 +1046,12 @@ function renderHeroGrid(){
   const rec=recentHeroes().filter(n=>state.heroes.includes(n));
   const recWrap=$('recentWrap');
   if(rec.length && !q){
-    recWrap.innerHTML='<div class="section-label">Recent</div><div class="hero-grid">'+rec.map(heroCellHTML).join('')+'</div>';
+    recWrap.innerHTML='<div class="section-label">'+esc(t('recent'))+'</div><div class="hero-grid">'+rec.map(heroCellHTML).join('')+'</div>';
   }else recWrap.innerHTML='';
   $('allLabel').style.display=q?'none':'';
   const list=state.heroes.filter(n=>heroMatchesFilter(n) && (!q||n.toLowerCase().includes(q)));
   $('heroGrid').innerHTML=list.map(heroCellHTML).join('') ||
-    '<div class="note" style="grid-column:1/-1;">No heroes match.</div>';
+    '<div class="note" style="grid-column:1/-1;">'+esc(t('no-heroes-match'))+'</div>';
 }
 
 // hero pick popup: place straight on the map (or add to bench)
@@ -909,18 +1061,18 @@ function openHeroPick(ev,name){
   const p=document.createElement('div'); p.className='mini-pop';
   p.innerHTML='<div class="ph">'+esc(name)+'</div>'+
     '<div class="row">'+
-      '<button class="btn btn-sm" style="border-color:var(--blue);color:var(--blue);" data-place-team="blue">Blue</button>'+
-      '<button class="btn btn-sm" style="border-color:var(--red);color:var(--red);" data-place-team="red">Red</button></div>'+
+      '<button class="btn btn-sm" style="border-color:var(--blue);color:var(--blue);" data-place-team="blue">'+esc(t('side-blue'))+'</button>'+
+      '<button class="btn btn-sm" style="border-color:var(--red);color:var(--red);" data-place-team="red">'+esc(t('side-red'))+'</button></div>'+
     '<div class="row">'+
-      '<button class="btn btn-sm" data-bench-team="blue">Bench B</button>'+
-      '<button class="btn btn-sm" data-bench-team="red">Bench R</button></div>';
+      '<button class="btn btn-sm" data-bench-team="blue">'+esc(tf('bench-team',{side:t('side-blue')}))+'</button>'+
+      '<button class="btn btn-sm" data-bench-team="red">'+esc(tf('bench-team',{side:t('side-red')}))+'</button></div>';
   document.body.appendChild(p);
   placePop(p,ev.clientX,ev.clientY);
   p.querySelectorAll('[data-place-team]').forEach(b=>b.onclick=()=>{
     const spot=spawnSpot(b.dataset.placeTeam);
     placeHero(name,b.dataset.placeTeam,spot.x,spot.y);
     pushRecent(name); renderHeroGrid(); closePop(); closeSheets();
-    toast(name+' placed — drag it into position.');
+    toast(tf('placed-drag',{name:name}));
   });
   p.querySelectorAll('[data-bench-team]').forEach(b=>b.onclick=()=>{
     state.bench[b.dataset.benchTeam].push({id:uid(),hero:name});
@@ -949,8 +1101,8 @@ function spawnSpot(team){
 //  BENCH
 // ════════════════════════════════════════════════════════════════
 function benchTokenHTML(item,team){
-  return '<div class="bench-token '+team+'" draggable="true" data-id="'+item.id+'" data-team="'+team+'" title="Tap, then tap the map">'+
-    '<button class="bt-rm" data-id="'+item.id+'" data-team="'+team+'" title="Remove from bench">×</button>'+
+  return '<div class="bench-token '+team+'" draggable="true" data-id="'+item.id+'" data-team="'+team+'" title="'+esc(t('tap-then-map'))+'">'+
+    '<button class="bt-rm" data-id="'+item.id+'" data-team="'+team+'" title="'+esc(t('tt-remove-bench'))+'">×</button>'+
     '<div class="ring"><span class="init">'+esc(initials(item.hero))+'</span>'+heroImgTag(item.hero)+'</div>'+
     '<div class="nm">'+esc(item.hero)+'</div></div>';
 }
@@ -958,7 +1110,7 @@ function renderBench(){
   ['blue','red'].forEach(team=>{
     const el=$('bench'+team[0].toUpperCase()+team.slice(1));
     const arr=state.bench[team];
-    el.innerHTML=arr.length?arr.map(it=>benchTokenHTML(it,team)).join(''):'<span class="bench-empty">empty</span>';
+    el.innerHTML=arr.length?arr.map(it=>benchTokenHTML(it,team)).join(''):'<span class="bench-empty">'+esc(t('bench-empty'))+'</span>';
     el.querySelectorAll('.bench-token').forEach(node=>{
       const id=node.dataset.id;
       node.addEventListener('click',e=>{
@@ -1126,23 +1278,23 @@ function pieceCenter(id){ const el=$(id); if(!el)return {cx:null,cy:null}; const
 function openTokenMenu(h){
   const other=h.team==='blue'?'red':'blue'; const c=pieceCenter(h.id);
   miniMenu(h.hero,[
-    {label:'Switch to '+other.toUpperCase(),fn:()=>{h.team=other;renderMap();markDirty();}},
-    {label:'To bench',fn:()=>{ F().heroes=F().heroes.filter(x=>x.id!==h.id); state.bench[h.team].push({id:uid(),hero:h.hero}); renderMap(); renderBench(); markDirty(); }},
-    {label:'Remove',style:'border-color:var(--red);color:var(--red);',fn:()=>{ F().heroes=F().heroes.filter(x=>x.id!==h.id); renderMap(); markDirty(); }},
+    {label:tf('switch-to',{side:other.toUpperCase()}),fn:()=>{h.team=other;renderMap();markDirty();}},
+    {label:t('to-bench'),fn:()=>{ F().heroes=F().heroes.filter(x=>x.id!==h.id); state.bench[h.team].push({id:uid(),hero:h.hero}); renderMap(); renderBench(); markDirty(); }},
+    {label:t('remove'),style:'border-color:var(--red);color:var(--red);',fn:()=>{ F().heroes=F().heroes.filter(x=>x.id!==h.id); renderMap(); markDirty(); }},
   ],c.cx,c.cy);
 }
 function openWardMenu(w){
   const other=w.team==='blue'?'red':'blue'; const c=pieceCenter(w.id);
-  miniMenu((w.team+' ward').toUpperCase(),[
-    {label:(w.range?'Hide':'Show')+' vision range',fn:()=>{w.range=!w.range;renderShapes();markDirty();}},
-    {label:'Switch to '+other.toUpperCase(),fn:()=>{w.team=other;renderMap();renderShapes();markDirty();}},
-    {label:'Remove',style:'border-color:var(--red);color:var(--red);',fn:()=>{ F().wards=F().wards.filter(x=>x.id!==w.id); renderMap(); renderShapes(); markDirty(); }},
+  miniMenu((t(w.team==='blue'?'side-blue':'side-red')+' '+t('ward')).toUpperCase(),[
+    {label:t(w.range?'hide-vision-range':'show-vision-range'),fn:()=>{w.range=!w.range;renderShapes();markDirty();}},
+    {label:tf('switch-to',{side:other.toUpperCase()}),fn:()=>{w.team=other;renderMap();renderShapes();markDirty();}},
+    {label:t('remove'),style:'border-color:var(--red);color:var(--red);',fn:()=>{ F().wards=F().wards.filter(x=>x.id!==w.id); renderMap(); renderShapes(); markDirty(); }},
   ],c.cx,c.cy);
 }
 function openSummonMenu(s){
   const c=pieceCenter(s.id);
-  miniMenu(s.type==='vanguard'?'Vanguard':'Darkslayer',[
-    {label:'Remove',style:'border-color:var(--red);color:var(--red);',fn:()=>{ F().summons=F().summons.filter(x=>x.id!==s.id); renderMap(); markDirty(); }},
+  miniMenu(s.type==='vanguard'?t('vanguard'):t('darkslayer'),[
+    {label:t('remove'),style:'border-color:var(--red);color:var(--red);',fn:()=>{ F().summons=F().summons.filter(x=>x.id!==s.id); renderMap(); markDirty(); }},
   ],c.cx,c.cy);
 }
 
@@ -1171,8 +1323,8 @@ mapBox.addEventListener('drop',e=>{
 function startPending(p){
   state.pending=p;
   highlightPending();
-  const label=p.kind==='bench'?p.hero : p.kind==='ward'?(p.team+' ward') : (p.type==='vanguard'?'Vanguard':'Darkslayer');
-  $('pendingTxt').textContent='Tap the map to place '+label;
+  const label=p.kind==='bench'?p.hero : p.kind==='ward'?(t(p.team==='blue'?'side-blue':'side-red')+' '+t('ward')) : (p.type==='vanguard'?t('vanguard'):t('darkslayer'));
+  $('pendingTxt').textContent=tf('tap-place',{label:label});
   $('pendingPill').style.display='flex';
   closeSheets();
 }
@@ -1225,7 +1377,7 @@ function toggleOnionSkin(){
 function buildTowersUI(){
   const wrap=$('towersWrap');
   wrap.innerHTML=['blue','red'].map(side=>
-    '<div class="tower-side '+side+'"><h4>'+side+' side</h4>'+
+    '<div class="tower-side '+side+'"><h4>'+esc(tf('side-name',{side:t(side==='blue'?'side-blue':'side-red')}))+'</h4>'+
     ['top','mid','bot'].map(lane=>
       '<div class="tw-row"><button class="tw-lane" data-side="'+side+'" data-lane="'+lane+'">'+lane.toUpperCase()+'</button>'+
       [0,1,2].map(t=>'<button class="tw-pip" data-side="'+side+'" data-lane="'+lane+'" data-tier="'+t+'">T'+(t+1)+'</button>').join('')+
@@ -1595,7 +1747,7 @@ function doRedo(){ const a=hist.redo.pop(); if(!a)return; applyH(a,false); hist.
 function renderFrames(){
   const w=$('frameChips');
   w.innerHTML=state.frames.map((f,i)=>
-    '<button class="f-chip'+(i===state.cur?' on':'')+'" data-i="'+i+'" title="Step '+(i+1)+' — hold or right-click for options">'+(i+1)+'</button>').join('');
+    '<button class="f-chip'+(i===state.cur?' on':'')+'" data-i="'+i+'" title="'+esc(tf('step-n-options',{n:i+1}))+'">'+(i+1)+'</button>').join('');
   w.querySelectorAll('.f-chip').forEach(b=>{
     const i=+b.dataset.i;
     let lpTimer=null, longPressed=false;
@@ -1630,24 +1782,24 @@ function addFrame(){
   state.frames.splice(state.cur+1,0,clone(F()));
   state.cur++;
   renderAll(); markDirty();
-  toast('Step '+(state.cur+1)+' added — move pieces to build the play.');
+  toast(tf('step-n-added',{n:state.cur+1}));
 }
 function openFrameMenu(i,cx,cy){
   if(i!==state.cur)setFrame(i);
-  const items=[{label:'Duplicate step '+(state.cur+1),fn:addFrame}];
+  const items=[{label:tf('duplicate-step',{n:state.cur+1}),fn:addFrame}];
   if(state.cur>0)
-    items.push({label:'Move left',fn:()=>moveFrame(state.cur,state.cur-1)});
+    items.push({label:t('move-left'),fn:()=>moveFrame(state.cur,state.cur-1)});
   if(state.cur<state.frames.length-1)
-    items.push({label:'Move right',fn:()=>moveFrame(state.cur,state.cur+1)});
-  items.push({label:'Clear drawings on this step',fn:clearDrawing});
+    items.push({label:t('move-right'),fn:()=>moveFrame(state.cur,state.cur+1)});
+  items.push({label:t('clear-drawings-step'),fn:clearDrawing});
   if(state.frames.length>1)
-    items.push({label:'Delete step '+(state.cur+1),style:'border-color:var(--red);color:var(--red);',fn:()=>{
+    items.push({label:tf('delete-step',{n:state.cur+1}),style:'border-color:var(--red);color:var(--red);',fn:()=>{
       state.frames.splice(state.cur,1);
       state.cur=Math.min(state.cur,state.frames.length-1);
       hist.undo=[]; hist.redo=[];   // frame indices shift — drop stale history
       renderAll(); markDirty();
     }});
-  miniMenu('Step '+(state.cur+1),items,cx,cy);
+  miniMenu(tf('step-n',{n:state.cur+1}),items,cx,cy);
 }
 function moveFrame(from,to){
   const [fr]=state.frames.splice(from,1);
@@ -1660,7 +1812,7 @@ function moveFrame(from,to){
 // playback: glide pieces between consecutive steps via CSS transitions
 async function togglePlay(){
   if(state.playing){ state.playing=false; return; }
-  if(state.frames.length<2){ toast('Add a second step with + to play a sequence.'); return; }
+  if(state.frames.length<2){ toast(t('add-second-step')); return; }
   state.playing=true; cancelPending(); setSel(null); closePop();
   $('btnPlay').classList.add('playing'); $('btnPlay').innerHTML=ICONS.stop;
   state.cur=0; renderAll();
@@ -1901,7 +2053,7 @@ async function downloadCanvas(c,filename){
   let blob;
   try{ blob=await new Promise(res=>c.toBlob(res,'image/png')); }
   catch(e){ blob=null; }
-  if(!blob) return toast('Export failed — try again.',true);
+  if(!blob) return toast(t('export-failed'),true);
   const file=new File([blob],filename,{type:'image/png'});
   if(navigator.canShare&&navigator.canShare({files:[file]})){
     try{ await navigator.share({files:[file],title:filename}); return; }catch(e){ /* user cancelled or unsupported — fall through */ }
@@ -1912,8 +2064,8 @@ async function downloadCanvas(c,filename){
   setTimeout(()=>URL.revokeObjectURL(url),4000);
 }
 async function exportPNG(){
-  if(!mapImg.naturalWidth) return toast('Map image not loaded yet — try again in a moment.',true);
-  toast('Building image…');
+  if(!mapImg.naturalWidth) return toast(t('map-not-loaded'),true);
+  toast(t('building-image'));
   const W=mapImg.naturalWidth, H=mapImg.naturalHeight, k=W/mapW;
   const c=document.createElement('canvas'); c.width=W; c.height=H;
   const x=c.getContext('2d');
@@ -2022,7 +2174,7 @@ async function exportPNG(){
 
   const filename=(state.scnName||'tactic-scenario').replace(/[^a-z0-9-_ ]/gi,'').trim()||'tactic-scenario';
   await downloadCanvas(c,filename+'.png');
-  toast('Exported “'+filename+'.png”');
+  toast(tf('exported-name',{name:filename}));
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -2046,32 +2198,31 @@ function checkOfflineSaves(){
   const arr=offlineSaves();
   if(!arr.length)return;
   const latest=arr[arr.length-1];
-  toast(arr.length+' local save'+(arr.length>1?'s':'')+' saved while offline — restore the latest?',false,{
-    label:'Restore',
+  toast(tf('offline-restore-prompt',{n:arr.length,s:arr.length>1?'s':''}),false,{
+    label:t('restore'),
     fn:()=>{
       applyBoardState(latest.board_state); state.scnName=latest.name;
       removeOfflineSave(arr.length-1);
-      toast('Restored “'+latest.name+'” — Save again once you\'re online to sync it.');
+      toast(tf('restored-name',{name:latest.name}));
     }
   });
 }
 
 async function openSave(){
-  if(!sb)return toast('Supabase library not loaded.',true);
+  if(!sb)return toast(t('supabase-not-loaded'),true);
   if(!await requireSession())return;
   closeSheets();
-  showModal('Save scenario',
-    '<span class="input-label">Scenario name</span>'+
-    '<input class="modal-search" id="svName" value="'+esc(state.scnName)+'" placeholder="e.g. Dragon setup vs Team X"/>'+
-    '<div class="note" style="margin-bottom:14px;">Saving with an existing name overwrites that scenario. '+
-    state.frames.length+' step'+(state.frames.length>1?'s':'')+' will be saved.</div>'+
-    '<button class="btn btn-primary" id="svGo" style="width:100%;">Save scenario</button>',
+  showModal(t('save-scenario'),
+    '<span class="input-label">'+esc(t('scenario-name'))+'</span>'+
+    '<input class="modal-search" id="svName" value="'+esc(state.scnName)+'" placeholder="'+esc(t('scenario-name-ph'))+'"/>'+
+    '<div class="note" style="margin-bottom:14px;">'+esc(tf('save-overwrite-note',{n:state.frames.length,s:state.frames.length>1?'s':''}))+'</div>'+
+    '<button class="btn btn-primary" id="svGo" style="width:100%;">'+esc(t('save-scenario'))+'</button>',
     (modal)=>{
       const inp=modal.querySelector('#svName');
       const go=async()=>{
         const name=inp.value.trim(); if(!name)return inp.focus();
-        if(name===VISION_ROW)return toast('That name is reserved.',true);
-        if(!ME.orgId)return toast('Your account isn\'t attached to a team yet — ask the beta admin.',true);
+        if(name===VISION_ROW)return toast(t('name-reserved'),true);
+        if(!ME.orgId)return toast(t('ask-beta-admin'),true);
         // "[tag] Name" in the input becomes a real tags entry
         const {tag,rest}=parseTag(name);
         const payload={org_id:ME.orgId,name:rest||name,tags:tag?[tag]:[],
@@ -2081,8 +2232,8 @@ async function openSave(){
           pushOfflineSave(payload); state.scnName=name; dirty=false; closeModal();
           toast(msg,true);
         };
-        if(!navigator.onLine)return goOffline('Offline — saved on this device. Re-save once you\'re back online.');
-        toast('Saving…');
+        if(!navigator.onLine)return goOffline(t('offline-saved'));
+        toast(t('saving'));
         try{
           let {data:existing,error:selErr}=await sb.from('scenarios').select('id').eq('name',payload.name).limit(1);
           if(selErr)throw new Error(selErr.message);
@@ -2091,10 +2242,10 @@ async function openSave(){
           else { res=await sb.from('scenarios').insert(payload); }
           if(res.error)throw new Error(res.error.message);
         }catch(e){
-          return goOffline('Couldn\'t reach the server — saved on this device instead.');
+          return goOffline(t('save-server-failed'));
         }
         state.scnName=name; dirty=false; closeModal();
-        toast('Saved “'+name+'”');
+        toast(tf('saved-name',{name:name}));
       };
       modal.querySelector('#svGo').onclick=go;
       inp.addEventListener('keydown',e=>{ if(e.key==='Enter')go(); });
@@ -2119,11 +2270,11 @@ function relTime(iso){
   return Math.floor(s/2592000)+'mo ago';
 }
 async function openLoad(){
-  if(!sb)return toast('Supabase library not loaded.',true);
+  if(!sb)return toast(t('supabase-not-loaded'),true);
   if(!await requireSession())return;
   closeSheets();
   let {data,error}=await sb.from('scenarios').select('*').order('updated_at',{ascending:false});
-  if(error)return toast('Load failed: '+error.message,true);
+  if(error)return toast(tf('load-failed',{msg:error.message}),true);
   // "last edited by": map user ids to org-mates' display names (RLS scopes
   // this to our own org; emails are never stored there)
   let byName={};
@@ -2134,9 +2285,9 @@ async function openLoad(){
   const tagOf=s=>(s.tags&&s.tags.length?s.tags[0]:parseTag(s.name).tag);
   const tags=[...new Set(data.map(tagOf).filter(Boolean))].sort();
   data=data.filter(s=>s.name!==VISION_ROW);   // reserved settings row, not a scenario
-  showModal('Load scenario',
-    !data.length ? '<div class="note">No saved scenarios yet.</div>' :
-    '<input class="modal-search" id="ldSearch" placeholder="Search scenarios…"/>'+
+  showModal(t('load-scenario'),
+    !data.length ? '<div class="note">'+esc(t('no-saved-scenarios'))+'</div>' :
+    '<input class="modal-search" id="ldSearch" placeholder="'+esc(t('search-scenarios-ph'))+'"/>'+
     (tags.length?'<div class="tag-chips" id="ldTags">'+tags.map(t=>
       '<button class="tag-chip" data-tag="'+esc(t)+'">'+esc(t)+'</button>').join('')+'</div>':'')+
     '<div class="scenario-grid" id="ldGrid">'+data.map(s=>{
@@ -2147,10 +2298,10 @@ async function openLoad(){
       '<img src="'+(s.preview_image||'')+'" alt="" onerror="this.style.background=\'#111\'"/>'+
       '<div class="cap"><span class="nmm">'+(tag?'<span class="tag-badge">'+esc(tag)+'</span> ':'')+esc(rest)+'</span>'+
       '<span class="steps">'+steps+' step'+(steps>1?'s':'')+'</span>'+
-      '<span class="del" data-del="'+s.id+'" title="Delete">✕</span></div>'+
-      '<div class="cap sub"><span class="when">'+(who?'by '+esc(who)+' · ':'')+relTime(s.updated_at)+'</span></div></div>';
+      '<span class="del" data-del="'+s.id+'" title="'+esc(t('delete'))+'">✕</span></div>'+
+      '<div class="cap sub"><span class="when">'+(who?esc(tf('by-name',{name:who}))+' · ':'')+relTime(s.updated_at)+'</span></div></div>';
     }).join('')+'</div>'+
-    '<div class="note" id="ldEmpty" style="display:none;">No scenarios match.</div>',
+    '<div class="note" id="ldEmpty" style="display:none;">'+esc(t('no-scenarios-match'))+'</div>',
     (modal)=>{
       const grid=modal.querySelector('#ldGrid');
       const search=modal.querySelector('#ldSearch');
@@ -2179,13 +2330,13 @@ async function openLoad(){
           if(e.target.dataset.del)return;
           const rec=data.find(d=>String(d.id)===card.dataset.id);
           applyBoardState(rec.board_state); state.scnName=rec.name;
-          closeModal(); toast('Loaded “'+rec.name+'”');
+          closeModal(); toast(tf('loaded-name',{name:rec.name}));
         });
       });
       grid.querySelectorAll('.del').forEach(d=>d.addEventListener('click',async e=>{
         e.stopPropagation();
         if(!await requireSession())return;
-        if(!confirm('Delete this scenario?'))return;
+        if(!confirm(t('confirm-delete-scenario')))return;
         await sb.from('scenarios').delete().eq('id',d.dataset.del);
         e.target.closest('.scenario-card').remove();
         applyFilter();
@@ -2230,13 +2381,13 @@ function toast(msg,err,action){
 //  ONBOARDING TOUR — first-visit help overlay ("?" in topbar replays it)
 // ════════════════════════════════════════════════════════════════
 const TOUR_STEPS=[
-  {t:'Pick heroes here',b:'Open the Heroes panel to search and tap a hero, then tap the map to place it.',
+  {t:'tour-1-t',b:'tour-1-b',
    target:()=>isDesktop()?$('sheetHeroes'):document.querySelector('#toolbar .tool-btn[onclick*="sheetHeroes"]')},
-  {t:'Drag pieces around',b:'Heroes, wards and objectives can be dragged straight on the map with the Move tool.',
+  {t:'tour-2-t',b:'tour-2-b',
    target:()=>$('mapBox')},
-  {t:'Steps build a play',b:'Each "step" chip at the bottom is a snapshot. Add steps and move pieces between them to animate a play.',
+  {t:'tour-3-t',b:'tour-3-b',
    target:()=>$('frameStrip')},
-  {t:'Save your scenario',b:'Hit Save any time to store the board. Load brings back any saved scenario later.',
+  {t:'tour-4-t',b:'tour-4-b',
    target:()=>$('btnSave')},
 ];
 let _tourI=0;
@@ -2252,13 +2403,13 @@ function showTourStep(){
   const s=TOUR_STEPS[_tourI];
   const card=$('tourCard');
   card.innerHTML=
-    '<div class="tt">'+esc(s.t)+'</div>'+
-    '<div class="bd">'+esc(s.b)+'</div>'+
+    '<div class="tt">'+esc(t(s.t))+'</div>'+
+    '<div class="bd">'+esc(t(s.b))+'</div>'+
     '<div class="ft">'+
       '<div class="dots">'+TOUR_STEPS.map((_,i)=>'<span class="dot'+(i===_tourI?' on':'')+'"></span>').join('')+'</div>'+
       '<div class="btns">'+
-        '<button class="skip" onclick="tourSkip()">Skip</button>'+
-        '<button onclick="tourNext()">'+(_tourI<TOUR_STEPS.length-1?'Next':'Got it')+'</button>'+
+        '<button class="skip" onclick="tourSkip()">'+esc(t('skip'))+'</button>'+
+        '<button onclick="tourNext()">'+esc(_tourI<TOUR_STEPS.length-1?t('next'):t('got-it'))+'</button>'+
       '</div>'+
     '</div>';
   card.style.display='flex';
@@ -2353,6 +2504,9 @@ function setupCalibration(){
     state.tokenSize=34; $('tokSize').value=34; $('tokSizeVal').textContent='34px';
   }
   setTool('move');
+  document.documentElement.lang=LANG;
+  applyI18n();
+  syncLangBtn();
   renderAll();
   layoutMap();
   initAuth();
@@ -2365,7 +2519,7 @@ function setupCalibration(){
   // one-time nudge: the map is landscape, phones usually aren't
   if(window.innerHeight>window.innerWidth&&window.innerWidth<700&&!sessionStorage.getItem('tactic_rotate_hint')){
     sessionStorage.setItem('tactic_rotate_hint','1');
-    setTimeout(()=>toast('Tip: rotate your phone for a bigger board.'),900);
+    setTimeout(()=>toast(t('tip-rotate')),900);
   }
 })();
 
@@ -2381,14 +2535,14 @@ document.querySelectorAll('.sbtab').forEach(b=>b.addEventListener('click',()=>se
 function toggleSidebar(){
   const on=document.body.classList.toggle('sb-collapsed');
   try{localStorage.setItem('tactic_sb_collapsed',on?'1':'0');}catch(e){}
-  const t=document.getElementById('sbToggle');
-  if(t){t.style.transform=on?'scaleX(-1)':''; t.title=on?'Show the side panel':'Hide the side panel';}
+  const tb=document.getElementById('sbToggle');
+  if(tb){tb.style.transform=on?'scaleX(-1)':''; tb.title=on?t('tt-show-panel'):t('tt-hide-panel');}
 }
 try{
   if(localStorage.getItem('tactic_sb_collapsed')==='1'){
     document.body.classList.add('sb-collapsed');
-    const t=document.getElementById('sbToggle');
-    if(t){t.style.transform='scaleX(-1)'; t.title='Show the side panel';}
+    const tb=document.getElementById('sbToggle');
+    if(tb){tb.style.transform='scaleX(-1)'; tb.title=t('tt-show-panel');}
   }
 }catch(e){}
 </script>
