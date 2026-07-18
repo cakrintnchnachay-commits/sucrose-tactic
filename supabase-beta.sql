@@ -23,10 +23,18 @@ create table orgs (
 );
 
 create table org_members (
-  user_id uuid primary key references auth.users (id) on delete cascade,
-  org_id  uuid not null references orgs (id) on delete cascade,
-  role    text not null default 'member'
+  user_id      uuid primary key references auth.users (id) on delete cascade,
+  org_id       uuid not null references orgs (id) on delete cascade,
+  role         text not null default 'member',
+  display_name text               -- shown on "last edited by"; never an email
 );
+
+-- helper: the caller's org. SECURITY DEFINER so policies on org_members
+-- itself can use it without recursing into their own table.
+create or replace function my_org_id() returns uuid
+language sql stable security definer set search_path = public
+as $$ select org_id from org_members where user_id = auth.uid() $$;
+grant execute on function my_org_id() to authenticated;
 
 create table scenarios (
   id            uuid primary key default gen_random_uuid(),
@@ -60,10 +68,15 @@ create policy scenarios_by_org on scenarios
   using     (org_id = (select org_id from org_members where user_id = auth.uid()))
   with check (org_id = (select org_id from org_members where user_id = auth.uid()));
 
--- org_members: you can read your own membership row (no anon access)
-create policy members_read_self on org_members
+-- org_members: members see their org-mates (for "last edited by") and can
+-- edit their own display name; no anon access
+create policy members_read_org on org_members
   for select to authenticated
-  using (user_id = auth.uid());
+  using (org_id = my_org_id());
+create policy members_update_self on org_members
+  for update to authenticated
+  using (user_id = auth.uid())
+  with check (user_id = auth.uid() and org_id = my_org_id());
 
 -- orgs: members can read their own org's row (no anon access)
 create policy orgs_read_own on orgs

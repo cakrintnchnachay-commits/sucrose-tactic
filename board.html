@@ -525,15 +525,27 @@ async function requireSession(){
 // On boot: no session → back to the sign-in page. With one → greet the
 // user's org in the topbar (org name comes through RLS, so a member can
 // only ever see their own org).
+const ME={userId:null,orgId:null,name:null};   // filled by initAuth
 async function initAuth(){
   if(!sb){ location.replace('index.html'); return; }
   const {data:{session}}=await sb.auth.getSession();
   if(!session){ location.replace('index.html'); return; }
   $('btnLogout').style.display='';
+  ME.userId=session.user.id;
   try{
-    const {data}=await sb.from('org_members').select('orgs(name)').eq('user_id',session.user.id).single();
-    if(data&&data.orgs&&data.orgs.name) $('orgLabel').textContent=data.orgs.name+' · beta';
+    const {data}=await sb.from('org_members').select('org_id,display_name,orgs(name)').eq('user_id',session.user.id).single();
+    if(data){
+      ME.orgId=data.org_id;
+      ME.name=data.display_name;
+      if(data.orgs&&data.orgs.name) $('orgLabel').textContent=data.orgs.name+' · beta';
+      // first login: default the display name to the email's local part
+      if(!ME.name){
+        ME.name=(session.user.email||'').split('@')[0]||'member';
+        sb.from('org_members').update({display_name:ME.name}).eq('user_id',session.user.id).then(()=>{});
+      }
+    }
   }catch(e){ console.warn('org lookup failed',e); }
+  if(!ME.orgId) toast('Your account isn\'t attached to a team yet — saving is disabled until it is.',true);
 }
 async function doLogout(){
   if(dirty&&!confirm('You have unsaved changes — log out anyway?'))return;
@@ -1777,7 +1789,7 @@ async function loadVisionSettings(){
 }
 
 // ════════════════════════════════════════════════════════════════
-//  SAVE / LOAD  (Supabase: tactic_scenarios — v1 saves still load)
+//  SAVE / LOAD  (Supabase: org-scoped `scenarios` — v1 saves still load)
 // ════════════════════════════════════════════════════════════════
 const r4=v=>+(+v).toFixed(4);
 function boardState(){
@@ -2059,7 +2071,12 @@ async function openSave(){
       const go=async()=>{
         const name=inp.value.trim(); if(!name)return inp.focus();
         if(name===VISION_ROW)return toast('That name is reserved.',true);
-        const payload={name,board_state:boardState(),preview_image:buildPreview(),updated_at:new Date().toISOString()};
+        if(!ME.orgId)return toast('Your account isn\'t attached to a team yet — ask the beta admin.',true);
+        // "[tag] Name" in the input becomes a real tags entry
+        const {tag,rest}=parseTag(name);
+        const payload={org_id:ME.orgId,name:rest||name,tags:tag?[tag]:[],
+          board_state:boardState(),preview_image:buildPreview(),
+          updated_by:ME.userId,updated_at:new Date().toISOString()};
         const goOffline=(msg)=>{
           pushOfflineSave(payload); state.scnName=name; dirty=false; closeModal();
           toast(msg,true);
@@ -2067,11 +2084,11 @@ async function openSave(){
         if(!navigator.onLine)return goOffline('Offline — saved on this device. Re-save once you\'re back online.');
         toast('Saving…');
         try{
-          let {data:existing,error:selErr}=await sb.from('tactic_scenarios').select('id').eq('name',name).limit(1);
+          let {data:existing,error:selErr}=await sb.from('scenarios').select('id').eq('name',payload.name).limit(1);
           if(selErr)throw new Error(selErr.message);
           let res;
-          if(existing&&existing.length){ res=await sb.from('tactic_scenarios').update(payload).eq('id',existing[0].id); }
-          else { res=await sb.from('tactic_scenarios').insert(payload); }
+          if(existing&&existing.length){ res=await sb.from('scenarios').update(payload).eq('id',existing[0].id); }
+          else { res=await sb.from('scenarios').insert(payload); }
           if(res.error)throw new Error(res.error.message);
         }catch(e){
           return goOffline('Couldn\'t reach the server — saved on this device instead.');
@@ -2105,9 +2122,17 @@ async function openLoad(){
   if(!sb)return toast('Supabase library not loaded.',true);
   if(!await requireSession())return;
   closeSheets();
-  let {data,error}=await sb.from('tactic_scenarios').select('*').order('updated_at',{ascending:false});
+  let {data,error}=await sb.from('scenarios').select('*').order('updated_at',{ascending:false});
   if(error)return toast('Load failed: '+error.message,true);
-  const tags=[...new Set(data.map(s=>parseTag(s.name).tag).filter(Boolean))].sort();
+  // "last edited by": map user ids to org-mates' display names (RLS scopes
+  // this to our own org; emails are never stored there)
+  let byName={};
+  try{
+    const {data:mem}=await sb.from('org_members').select('user_id,display_name');
+    (mem||[]).forEach(m=>{ if(m.display_name)byName[m.user_id]=m.display_name; });
+  }catch(e){}
+  const tagOf=s=>(s.tags&&s.tags.length?s.tags[0]:parseTag(s.name).tag);
+  const tags=[...new Set(data.map(tagOf).filter(Boolean))].sort();
   data=data.filter(s=>s.name!==VISION_ROW);   // reserved settings row, not a scenario
   showModal('Load scenario',
     !data.length ? '<div class="note">No saved scenarios yet.</div>' :
@@ -2116,13 +2141,14 @@ async function openLoad(){
       '<button class="tag-chip" data-tag="'+esc(t)+'">'+esc(t)+'</button>').join('')+'</div>':'')+
     '<div class="scenario-grid" id="ldGrid">'+data.map(s=>{
       const steps=(s.board_state&&s.board_state.frames)?s.board_state.frames.length:1;
-      const {tag,rest}=parseTag(s.name);
+      const tag=tagOf(s), rest=parseTag(s.name).rest||s.name;
+      const who=byName[s.updated_by];
       return '<div class="scenario-card" data-id="'+s.id+'" data-name="'+esc(s.name.toLowerCase())+'" data-tag="'+esc(tag)+'">'+
       '<img src="'+(s.preview_image||'')+'" alt="" onerror="this.style.background=\'#111\'"/>'+
       '<div class="cap"><span class="nmm">'+(tag?'<span class="tag-badge">'+esc(tag)+'</span> ':'')+esc(rest)+'</span>'+
       '<span class="steps">'+steps+' step'+(steps>1?'s':'')+'</span>'+
       '<span class="del" data-del="'+s.id+'" title="Delete">✕</span></div>'+
-      '<div class="cap sub"><span class="when">'+relTime(s.updated_at)+'</span></div></div>';
+      '<div class="cap sub"><span class="when">'+(who?'by '+esc(who)+' · ':'')+relTime(s.updated_at)+'</span></div></div>';
     }).join('')+'</div>'+
     '<div class="note" id="ldEmpty" style="display:none;">No scenarios match.</div>',
     (modal)=>{
@@ -2160,7 +2186,7 @@ async function openLoad(){
         e.stopPropagation();
         if(!await requireSession())return;
         if(!confirm('Delete this scenario?'))return;
-        await sb.from('tactic_scenarios').delete().eq('id',d.dataset.del);
+        await sb.from('scenarios').delete().eq('id',d.dataset.del);
         e.target.closest('.scenario-card').remove();
         applyFilter();
       }));
