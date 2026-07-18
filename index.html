@@ -1,56 +1,153 @@
 <!DOCTYPE html>
-<!-- SUCROSE TACTIC (closed beta) — index.html: sign-in page.
-     Phase 2 version: minimal login box in the site's visual language.
-     Phase 4 replaces the hero section with the full Thai-first pitch
-     page + beta-team logo wall. -->
-<html lang="en">
+<!-- SUCROSE TACTIC (closed beta) — index.html
+     Landing + sign-in. Thai first, English second (audience: Thai org
+     managers). Same visual language as the board: dark, DM Mono/Bebas,
+     1px borders, no decoration for decoration's sake. -->
+<html lang="th">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#0b0b0d"/>
-<title>Sucrose Tactic — Closed Beta</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>Sucrose Tactic — กระดานแทคติกสำหรับทีมอีสปอร์ต</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --bg:#0b0b0d; --panel:#141416; --ink:#f4f4f0; --mut:#8a8a90;
-  --line:#26262a; --accent:#44ff88; --red:#FF4444;
+  --line:#26262a; --accent:#44ff88;
 }
 *{box-sizing:border-box;}
-html,body{height:100%;margin:0;}
-body{background:var(--bg);color:var(--ink);font-family:'DM Sans',sans-serif;font-size:14px;
-  display:flex;align-items:center;justify-content:center;padding:20px;}
-.card{width:min(400px,94vw);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:34px 30px;}
-h1{font-family:'Bebas Neue',sans-serif;font-size:34px;letter-spacing:3px;margin:0 0 2px;line-height:1;}
-h1 .accent{color:var(--accent);}
-.sub{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--mut);margin-bottom:26px;}
-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mut);display:block;margin-bottom:8px;}
-input[type=email]{width:100%;padding:12px 13px;background:var(--bg);border:1px solid var(--line);border-radius:3px;
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:'IBM Plex Sans Thai','DM Sans',sans-serif;font-size:15px;line-height:1.7;}
+.wrap{max-width:900px;margin:0 auto;padding:0 22px;}
+.mono{font-family:'DM Mono',monospace;}
+.label{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--mut);}
+/* Thai inside a spaced mono label breaks its vowel marks — render it in the
+   Thai face at normal spacing instead */
+.label .th{font-family:'IBM Plex Sans Thai',sans-serif;font-size:12px;letter-spacing:0;}
+.en{color:var(--mut);font-size:13px;}
+
+header{padding:26px 0 0;}
+.brand{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+.brand h1{font-family:'Bebas Neue',sans-serif;font-size:30px;letter-spacing:3px;margin:0;line-height:1;}
+.brand h1 .accent{color:var(--accent);}
+.brand .tag{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:2px;padding:3px 8px;}
+
+.hero{display:grid;grid-template-columns:1fr 320px;gap:36px;align-items:start;padding:44px 0 8px;}
+@media(max-width:820px){.hero{grid-template-columns:1fr;}}
+.hero h2{font-size:26px;font-weight:600;line-height:1.45;margin:0 0 14px;}
+.hero p{margin:0 0 10px;color:#cfcfc9;}
+
+.login{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:24px 22px;}
+.login label{display:block;margin-bottom:8px;}
+.login input[type=email]{width:100%;padding:11px 12px;background:var(--bg);border:1px solid var(--line);border-radius:2px;
   color:var(--ink);font-family:'DM Mono',monospace;font-size:13px;outline:none;}
-input[type=email]:focus{border-color:var(--mut);}
-button{width:100%;margin-top:14px;padding:12px;border:none;border-radius:3px;background:var(--ink);color:var(--bg);
+.login input[type=email]:focus{border-color:var(--mut);}
+.login button{width:100%;margin-top:12px;padding:11px;border:none;border-radius:2px;background:var(--ink);color:var(--bg);
   font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;}
-button:hover{background:#cfcfc9;}
-button:disabled{opacity:.5;cursor:default;}
-.msg{margin-top:16px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.6;color:var(--mut);min-height:18px;}
+.login button:hover{background:#cfcfc9;}
+.login button:disabled{opacity:.5;cursor:default;}
+.msg{margin-top:12px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.6;color:var(--mut);min-height:18px;}
 .msg.ok{color:var(--accent);}
 .msg.err{color:#ffb3b3;}
 .msg a{color:var(--ink);}
-.foot{margin-top:26px;padding-top:16px;border-top:1px solid var(--line);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;color:var(--mut);line-height:1.7;}
+.login .small{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:12px;color:var(--mut);line-height:1.6;}
+
+.shot{margin:30px 0 0;}
+.shot img{display:block;width:100%;border:1px solid var(--line);border-radius:4px;}
+.shot .cap{font-family:'DM Mono',monospace;font-size:10px;color:var(--mut);letter-spacing:1px;margin-top:8px;}
+
+section{padding:44px 0 0;}
+.rule{border:0;border-top:1px solid var(--line);margin:44px 0 0;}
+.feat{list-style:none;margin:18px 0 0;padding:0;}
+.feat li{padding:13px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr;gap:2px;}
+.feat li:first-child{border-top:1px solid var(--line);}
+.feat b{font-weight:500;}
+.deal{background:var(--panel);border:1px solid var(--line);border-left:2px solid var(--accent);border-radius:4px;padding:20px 22px;margin-top:18px;}
+.deal p{margin:0 0 6px;}
+
+.wall{display:flex;flex-wrap:wrap;gap:14px;margin-top:18px;align-items:center;}
+.wall .org{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:3px;padding:10px 16px;background:var(--panel);}
+.wall .org img{height:34px;width:auto;max-width:90px;object-fit:contain;}
+.wall .org .nm{font-family:'DM Mono',monospace;font-size:11px;color:#cfcfc9;}
+.wall-empty{font-family:'DM Mono',monospace;font-size:11px;color:var(--mut);margin-top:14px;}
+
+footer{margin-top:56px;border-top:1px solid var(--line);padding:22px 0 44px;
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;color:var(--mut);display:flex;gap:18px;flex-wrap:wrap;}
+footer a{color:var(--mut);}
+footer a:hover{color:var(--ink);}
 </style>
 </head>
 <body>
-<div class="card">
-  <h1>SUCROSE <span class="accent">TACTIC</span></h1>
-  <div class="sub">Tactic board · closed beta</div>
-  <form id="loginForm">
-    <label for="email">Email</label>
-    <input type="email" id="email" autocomplete="email" placeholder="you@team.gg" required/>
-    <button type="submit" id="goBtn">Send sign-in link</button>
-  </form>
-  <div class="msg" id="msg"></div>
-  <div class="foot">Invite-only during the beta. A sign-in link is emailed to you — no password needed.<br>
-  ทดสอบแบบปิด — ลิงก์เข้าสู่ระบบจะถูกส่งไปที่อีเมลของคุณ</div>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <h1>SUCROSE <span class="accent">TACTIC</span></h1>
+      <span class="tag">Closed beta</span>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div>
+      <h2>กระดานวางแผนสำหรับทีม RoV<br>วางเป็นสเต็ป เห็นเป็นภาพ เก็บเป็นของทีม</h2>
+      <p>วางตำแหน่งฮีโร่บนแมพจริง ลากลูกศร วงโซน ปักวอร์ด
+         แล้วกดเล่นดูแผนเดินทีละสเต็ปเหมือนดูรีเพลย์ —
+         จบแล้วเซฟไว้ให้ทั้งทีมเปิดดูได้ ไม่ต้องวาดใหม่บนกระดาษทุกครั้ง</p>
+      <p class="en">A planning board for RoV teams: position heroes on the real map,
+         draw the play, step through it like a replay, and keep every scenario
+         saved privately per team.</p>
+    </div>
+
+    <div class="login" id="loginCard">
+      <span class="label"><span class="th">เข้าสู่ระบบ</span> / Sign in</span>
+      <form id="loginForm" style="margin-top:14px;">
+        <label class="label" for="email" style="letter-spacing:2px;">Email</label>
+        <input type="email" id="email" autocomplete="email" placeholder="you@team.gg" required/>
+        <button type="submit" id="goBtn">ส่งลิงก์เข้าสู่ระบบ</button>
+      </form>
+      <div class="msg" id="msg"></div>
+      <div class="small">ระบบจะส่งลิงก์ไปที่อีเมล ไม่ต้องตั้งรหัสผ่าน<br>
+        เบต้ารอบนี้เข้าได้เฉพาะทีมที่ได้รับเชิญ</div>
+    </div>
+  </div>
+
+  <div class="shot">
+    <img src="assets/screen-board.jpg" alt="หน้าจอกระดานแทคติก — แผนตั้งรับ Dragon พร้อมระยะมองเห็นของวอร์ด"/>
+    <div class="cap">แผนตั้งรับ DRAGON — วงประคือระยะมองเห็นจริงของวอร์ดตามแมพ</div>
+  </div>
+
+  <section>
+    <span class="label"><span class="th">ทำอะไรได้</span> / What it does</span>
+    <ul class="feat">
+      <li><b>เดินแผนทีละสเต็ป</b><span class="en">Duplicate a step, move the pieces, press play — the board animates the rotation.</span></li>
+      <li><b>ระยะวอร์ดตรงตามแมพจริง</b><span class="en">Ward sight-lines are projected onto the map's actual perspective, not a flat circle.</span></li>
+      <li><b>เซฟของทีมใครทีมมัน</b><span class="en">Saves are isolated per team at the database level — other orgs cannot read them, by construction.</span></li>
+      <li><b>ใช้บนมือถือได้จริง</b><span class="en">Built phone-first: bottom sheets, tap-to-place, pinch-free zoom controls.</span></li>
+      <li><b>ส่งออกเป็นรูปเดียว</b><span class="en">Export any step as a PNG and drop it straight into the team chat.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="label"><span class="th">ข้อตกลงช่วงเบต้า</span> / The deal</span>
+    <div class="deal">
+      <p>ช่วงเบต้า<b>ใช้ฟรีทั้งหมด</b> สิ่งเดียวที่เราขอคือโลโก้ทีมของคุณบนหน้านี้
+         ในฐานะทีมที่ร่วมทดสอบ — ไม่ใช่การรับรองสินค้า แค่บอกว่าทีมคุณช่วยกันทำให้มันดีขึ้น</p>
+      <p class="en">Free during the beta. The only price: your team's logo on this page
+         as a beta tester — testers, not endorsers.</p>
+    </div>
+  </section>
+
+  <section id="wallSection" style="display:none;">
+    <span class="label"><span class="th">ทีมที่ร่วมทดสอบ</span> / Beta teams</span>
+    <div class="wall" id="wall"></div>
+  </section>
+
+  <footer>
+    <span>SUCROSE TACTIC · CLOSED BETA</span>
+    <a href="mailto:cakrintnchnachay@gmail.com?subject=Sucrose%20Tactic%20beta"><span style="font-family:'IBM Plex Sans Thai',sans-serif;letter-spacing:0;">ติดต่อ</span> / Contact</a>
+  </footer>
 </div>
 
 <script>
@@ -60,36 +157,49 @@ const SUPABASE_KEY='sb_publishable_E5maB4TefGpEDkLh_Z6MWQ_JNO9h4H1';
 const sb=window.supabase?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 const $=id=>document.getElementById(id);
 const CONTACT='cakrintnchnachay@gmail.com';
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 
 function say(text,cls){ const m=$('msg'); m.className='msg '+(cls||''); m.innerHTML=text; }
 
-// A magic link that failed (expired/used) comes back as #error=...&error_description=...
+// A magic link that failed (expired/used) comes back as #error=...
 function checkLinkError(){
   const h=new URLSearchParams(location.hash.replace(/^#/,''));
   if(h.get('error')){
-    say('That sign-in link has expired or was already used — enter your email to get a fresh one.','err');
+    say('ลิงก์หมดอายุหรือถูกใช้ไปแล้ว — กรอกอีเมลเพื่อรับลิงก์ใหม่','err');
     history.replaceState(null,'',location.pathname);
     return true;
   }
   return false;
 }
 
+// Logo wall: anon-readable view exposes ONLY orgs that provided a logo.
+// Names are org-provided text → esc() before rendering, always.
+async function loadWall(){
+  if(!sb)return;
+  try{
+    const {data}=await sb.from('public_logo_wall').select('name,logo_url');
+    if(data&&data.length){
+      $('wall').innerHTML=data.map(o=>
+        '<div class="org"><img src="'+esc(o.logo_url)+'" alt="" loading="lazy"'+
+        ' onerror="this.style.display=\'none\'"/><span class="nm">'+esc(o.name)+'</span></div>').join('');
+      $('wallSection').style.display='';
+    }
+  }catch(e){}
+}
+
 async function boot(){
-  if(!sb){ say('Could not load the sign-in library — check your connection.','err'); return; }
+  if(!sb){ say('โหลดระบบเข้าสู่ระบบไม่สำเร็จ — เช็คอินเทอร์เน็ตแล้วรีเฟรช','err'); return; }
   const hadErr=checkLinkError();
-  // A successful magic link lands here with a session in the URL; the client
-  // stores it, then we hand over to the board.
   const {data:{session}}=await sb.auth.getSession();
   if(session && !hadErr){ location.replace('board.html'); return; }
+  loadWall();
 
   $('loginForm').addEventListener('submit',async e=>{
     e.preventDefault();
     const email=$('email').value.trim();
     if(!email)return;
     $('goBtn').disabled=true;
-    say('Sending…');
-    // shouldCreateUser:false — unknown emails are refused instead of being
-    // signed up. (Signups are also disabled server-side in the dashboard.)
+    say('กำลังส่ง…');
     const {error}=await sb.auth.signInWithOtp({
       email,
       options:{shouldCreateUser:false, emailRedirectTo:location.origin+location.pathname}
@@ -97,14 +207,14 @@ async function boot(){
     $('goBtn').disabled=false;
     if(error){
       if(/signup|not allowed|disabled|not found/i.test(error.message)){
-        say('This beta is invite-only and that email isn’t on the list.<br>'+
-            'Want in? <a href="mailto:'+CONTACT+'?subject=Sucrose%20Tactic%20beta">Email us</a>.','err');
+        say('อีเมลนี้ยังไม่อยู่ในรายชื่อเบต้า — อยากร่วมทดสอบ? '+
+            '<a href="mailto:'+CONTACT+'?subject=Sucrose%20Tactic%20beta">ส่งอีเมลหาเรา</a>','err');
       }else{
-        say('Could not send the link: '+error.message.replace(/</g,'&lt;'),'err');
+        say('ส่งลิงก์ไม่สำเร็จ: '+esc(error.message),'err');
       }
       return;
     }
-    say('Check your email — the sign-in link is on its way. You can close this tab.','ok');
+    say('ส่งแล้ว — เช็คอีเมลของคุณ กดลิงก์แล้วจะเข้าบอร์ดอัตโนมัติ','ok');
   });
 }
 boot();
