@@ -175,8 +175,10 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;',
 
 function say(text,cls){ const m=$('msg'); m.className='msg '+(cls||''); m.innerHTML=text; }
 
-function sayNotInvited(){
-  say('อีเมลนี้ยังไม่อยู่ในรายชื่อเบต้า — อยากร่วมทดสอบ? '+
+function sayNotInvited(viaGoogle){
+  say('อีเมล'+(viaGoogle?'ของบัญชี Google ที่เลือก':'นี้')+'ยังไม่อยู่ในรายชื่อเบต้า'+
+      (viaGoogle?' — กด "เข้าด้วย Google" อีกครั้งแล้วเลือกบัญชีที่ได้รับเชิญ':'')+
+      '<br>อยากร่วมทดสอบ? '+
       '<a href="mailto:'+CONTACT+'?subject=Sucrose%20Tactic%20beta">ส่งอีเมลหาเรา</a>','err');
 }
 
@@ -189,8 +191,8 @@ function checkLinkError(){
   const err=hash.get('error')||qs.get('error');
   if(!err) return false;
   const desc=hash.get('error_description')||qs.get('error_description')||'';
-  if(/database error|saving new user|not invited/i.test(desc)){
-    sayNotInvited();
+  if(/database error|saving new user|not invited|signup.*not allowed/i.test(desc)){
+    sayNotInvited(!!qs.get('error')); // query = OAuth redirect, hash = email link
   }else{
     say('ลิงก์หมดอายุหรือถูกใช้ไปแล้ว — เข้าด้วย Google หรือกรอกอีเมลเพื่อรับลิงก์ใหม่','err');
   }
@@ -228,7 +230,12 @@ async function boot(){
     say('กำลังไปหน้า Google…');
     const {error}=await sb.auth.signInWithOAuth({
       provider:'google',
-      options:{redirectTo:location.origin+location.pathname}
+      options:{
+        redirectTo:location.origin+location.pathname,
+        // Always show the account chooser — otherwise a rejected
+        // account is silently reused on every retry.
+        queryParams:{prompt:'select_account'}
+      }
     });
     if(error){
       $('googleBtn').disabled=false;
@@ -242,14 +249,16 @@ async function boot(){
     if(!email)return;
     $('goBtn').disabled=true;
     say('กำลังส่ง…');
+    // shouldCreateUser:true — the beta_invites DB trigger is the single
+    // gate now; invited first-timers must be creatable from either flow.
     const {error}=await sb.auth.signInWithOtp({
       email,
-      options:{shouldCreateUser:false, emailRedirectTo:location.origin+location.pathname}
+      options:{shouldCreateUser:true, emailRedirectTo:location.origin+location.pathname}
     });
     $('goBtn').disabled=false;
     if(error){
-      if(/signup|not allowed|disabled|not found/i.test(error.message)){
-        sayNotInvited();
+      if(/signup|not allowed|disabled|not found|database error|saving new user/i.test(error.message)){
+        sayNotInvited(false);
       }else{
         say('ส่งลิงก์ไม่สำเร็จ: '+esc(error.message),'err');
       }
