@@ -6,11 +6,10 @@
 --  (same pattern as supabase-setup.sql in the private repo).
 --  Design: every org's scenarios are isolated by RLS — the anon key
 --  alone can read nothing except hero names and the public logo wall.
---  Auth is Supabase email magic links; signups are DISABLED in the
---  dashboard. Each beta org is onboarded by hand:
---    1. Dashboard → Auth → create the user by email
---    2. insert into orgs (name) values ('Org Name') returning id;
---    3. insert into org_members (user_id, org_id) values ('<auth uid>', '<org id>');
+--  Auth is Google OAuth + email magic links. Dashboard signups are
+--  ENABLED (required for both flows to create invited users); the
+--  beta_invites trigger at the bottom of this file is the actual gate.
+--  Onboarding: see the "Beta invite gate" section below.
 -- ═══════════════════════════════════════════════════════════════════
 
 -- ── Tables ─────────────────────────────────────────────────────────
@@ -123,6 +122,10 @@ create table beta_invites (
 alter table beta_invites enable row level security;
 
 -- Gate: reject creation of any auth user whose email is not invited.
+-- Also reject password-bearing signups outright: the site only offers
+-- Google OAuth and magic links, so a password signup is an API-level
+-- probe — and allowing it would let someone pre-empt an invited
+-- coach's email with their own password before the coach's first login.
 create or replace function public.gate_new_user()
 returns trigger
 language plpgsql security definer set search_path = public
@@ -132,8 +135,15 @@ begin
      or not exists (select 1 from beta_invites where email = lower(new.email)) then
     raise exception 'not invited to the beta';
   end if;
+  if coalesce(new.encrypted_password, '') <> '' then
+    raise exception 'password signups are not supported';
+  end if;
   return new;
 end $$;
+
+-- Trigger functions are not API endpoints — no direct EXECUTE.
+revoke execute on function public.gate_new_user() from public, anon, authenticated;
+revoke execute on function public.link_new_user() from public, anon, authenticated;
 
 create trigger beta_gate_before_user_created
   before insert on auth.users
@@ -167,3 +177,32 @@ from auth.users u
 join org_members m on m.user_id = u.id
 where u.email is not null
 on conflict (email) do nothing;
+
+-- ── Admin onboarding helper ────────────────────────────────────────
+-- Migration: admin_onboard_helper. One call per team, SQL editor only:
+--   select admin_onboard('coach@team.gg', 'Team Name');
+-- Creates the org if new, upserts the invite, and links the account
+-- immediately if it already exists (pre-gate signups).
+create or replace function public.admin_onboard(p_email text, p_org_name text)
+returns text
+language plpgsql security definer set search_path = public
+as $$
+declare v_org uuid; v_uid uuid;
+begin
+  p_email := lower(trim(p_email));
+  select id into v_org from orgs where name = p_org_name;
+  if v_org is null then
+    insert into orgs (name) values (p_org_name) returning id into v_org;
+  end if;
+  insert into beta_invites (email, org_id) values (p_email, v_org)
+  on conflict (email) do update set org_id = excluded.org_id;
+  select id into v_uid from auth.users where lower(email) = p_email;
+  if v_uid is not null then
+    insert into org_members (user_id, org_id) values (v_uid, v_org)
+    on conflict (user_id) do nothing;
+    return p_email || ' invited + existing account linked to ' || p_org_name;
+  end if;
+  return p_email || ' invited — will be linked to ' || p_org_name || ' on first sign-in';
+end $$;
+-- Admin-only: not callable through the API.
+revoke execute on function public.admin_onboard(text, text) from public, anon, authenticated;
