@@ -48,6 +48,12 @@ header{padding:26px 0 0;}
   font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;cursor:pointer;}
 .login button:hover{background:#cfcfc9;}
 .login button:disabled{opacity:.5;cursor:default;}
+.login button.gbtn{margin-top:0;display:flex;align-items:center;justify-content:center;gap:10px;
+  background:var(--bg);color:var(--ink);border:1px solid var(--line);}
+.login button.gbtn:hover{border-color:var(--mut);background:var(--bg);}
+.login .or{display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--mut);
+  font-family:'DM Mono',monospace;font-size:10px;letter-spacing:2px;}
+.login .or::before,.login .or::after{content:'';flex:1;height:1px;background:var(--line);}
 .msg{margin-top:12px;font-family:'DM Mono',monospace;font-size:11px;line-height:1.6;color:var(--mut);min-height:18px;}
 .msg.ok{color:var(--accent);}
 .msg.err{color:#ffb3b3;}
@@ -103,13 +109,18 @@ footer a:hover{color:var(--ink);}
 
     <div class="login" id="loginCard">
       <span class="label"><span class="th">เข้าสู่ระบบ</span> / Sign in</span>
-      <form id="loginForm" style="margin-top:14px;">
+      <button type="button" id="googleBtn" class="gbtn" style="margin-top:14px;">
+        <svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        <span>เข้าด้วย Google</span>
+      </button>
+      <div class="or">หรือ / OR</div>
+      <form id="loginForm">
         <label class="label" for="email" style="letter-spacing:2px;">Email</label>
         <input type="email" id="email" autocomplete="email" placeholder="you@team.gg" required/>
         <button type="submit" id="goBtn">ส่งลิงก์เข้าสู่ระบบ</button>
       </form>
       <div class="msg" id="msg"></div>
-      <div class="small">ระบบจะส่งลิงก์ไปที่อีเมล ไม่ต้องตั้งรหัสผ่าน<br>
+      <div class="small">เข้าด้วย Google ได้เลย หรือรับลิงก์ทางอีเมล ไม่ต้องตั้งรหัสผ่าน<br>
         เบต้ารอบนี้เข้าได้เฉพาะทีมที่ได้รับเชิญ</div>
     </div>
   </div>
@@ -164,15 +175,27 @@ function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;',
 
 function say(text,cls){ const m=$('msg'); m.className='msg '+(cls||''); m.innerHTML=text; }
 
-// A magic link that failed (expired/used) comes back as #error=...
+function sayNotInvited(){
+  say('อีเมลนี้ยังไม่อยู่ในรายชื่อเบต้า — อยากร่วมทดสอบ? '+
+      '<a href="mailto:'+CONTACT+'?subject=Sucrose%20Tactic%20beta">ส่งอีเมลหาเรา</a>','err');
+}
+
+// Failed magic links come back as #error=...; failed OAuth sign-ins as
+// ?error=... A Google account rejected by the beta gate (DB trigger)
+// surfaces as "Database error saving new user".
 function checkLinkError(){
-  const h=new URLSearchParams(location.hash.replace(/^#/,''));
-  if(h.get('error')){
-    say('ลิงก์หมดอายุหรือถูกใช้ไปแล้ว — กรอกอีเมลเพื่อรับลิงก์ใหม่','err');
-    history.replaceState(null,'',location.pathname);
-    return true;
+  const hash=new URLSearchParams(location.hash.replace(/^#/,''));
+  const qs=new URLSearchParams(location.search);
+  const err=hash.get('error')||qs.get('error');
+  if(!err) return false;
+  const desc=hash.get('error_description')||qs.get('error_description')||'';
+  if(/database error|saving new user|not invited/i.test(desc)){
+    sayNotInvited();
+  }else{
+    say('ลิงก์หมดอายุหรือถูกใช้ไปแล้ว — เข้าด้วย Google หรือกรอกอีเมลเพื่อรับลิงก์ใหม่','err');
   }
-  return false;
+  history.replaceState(null,'',location.pathname);
+  return true;
 }
 
 // Logo wall: anon-readable view exposes ONLY orgs that provided a logo.
@@ -195,7 +218,23 @@ async function boot(){
   const hadErr=checkLinkError();
   const {data:{session}}=await sb.auth.getSession();
   if(session && !hadErr){ location.replace('board.html'); return; }
+  // OAuth code exchange can finish after this first getSession() —
+  // follow the auth state instead of racing it.
+  sb.auth.onAuthStateChange((_ev,s)=>{ if(s) location.replace('board.html'); });
   loadWall();
+
+  $('googleBtn').addEventListener('click',async()=>{
+    $('googleBtn').disabled=true;
+    say('กำลังไปหน้า Google…');
+    const {error}=await sb.auth.signInWithOAuth({
+      provider:'google',
+      options:{redirectTo:location.origin+location.pathname}
+    });
+    if(error){
+      $('googleBtn').disabled=false;
+      say('เข้าด้วย Google ไม่สำเร็จ: '+esc(error.message),'err');
+    }
+  });
 
   $('loginForm').addEventListener('submit',async e=>{
     e.preventDefault();
@@ -210,8 +249,7 @@ async function boot(){
     $('goBtn').disabled=false;
     if(error){
       if(/signup|not allowed|disabled|not found/i.test(error.message)){
-        say('อีเมลนี้ยังไม่อยู่ในรายชื่อเบต้า — อยากร่วมทดสอบ? '+
-            '<a href="mailto:'+CONTACT+'?subject=Sucrose%20Tactic%20beta">ส่งอีเมลหาเรา</a>','err');
+        sayNotInvited();
       }else{
         say('ส่งลิงก์ไม่สำเร็จ: '+esc(error.message),'err');
       }
