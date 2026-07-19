@@ -6,11 +6,10 @@
 --  (same pattern as supabase-setup.sql in the private repo).
 --  Design: every org's scenarios are isolated by RLS — the anon key
 --  alone can read nothing except hero names and the public logo wall.
---  Auth is Supabase email magic links; signups are DISABLED in the
---  dashboard. Each beta org is onboarded by hand:
---    1. Dashboard → Auth → create the user by email
---    2. insert into orgs (name) values ('Org Name') returning id;
---    3. insert into org_members (user_id, org_id) values ('<auth uid>', '<org id>');
+--  Auth is Google OAuth + email magic links. Dashboard signups are
+--  ENABLED (required for both flows to create invited users); the
+--  beta_invites trigger at the bottom of this file is the actual gate.
+--  Onboarding: see the "Beta invite gate" section below.
 -- ═══════════════════════════════════════════════════════════════════
 
 -- ── Tables ─────────────────────────────────────────────────────────
