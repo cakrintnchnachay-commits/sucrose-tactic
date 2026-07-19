@@ -122,6 +122,10 @@ create table beta_invites (
 alter table beta_invites enable row level security;
 
 -- Gate: reject creation of any auth user whose email is not invited.
+-- Also reject password-bearing signups outright: the site only offers
+-- Google OAuth and magic links, so a password signup is an API-level
+-- probe — and allowing it would let someone pre-empt an invited
+-- coach's email with their own password before the coach's first login.
 create or replace function public.gate_new_user()
 returns trigger
 language plpgsql security definer set search_path = public
@@ -131,8 +135,15 @@ begin
      or not exists (select 1 from beta_invites where email = lower(new.email)) then
     raise exception 'not invited to the beta';
   end if;
+  if coalesce(new.encrypted_password, '') <> '' then
+    raise exception 'password signups are not supported';
+  end if;
   return new;
 end $$;
+
+-- Trigger functions are not API endpoints — no direct EXECUTE.
+revoke execute on function public.gate_new_user() from public, anon, authenticated;
+revoke execute on function public.link_new_user() from public, anon, authenticated;
 
 create trigger beta_gate_before_user_created
   before insert on auth.users
