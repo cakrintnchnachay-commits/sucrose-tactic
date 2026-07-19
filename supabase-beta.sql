@@ -102,3 +102,68 @@ create view public_logo_wall as
   select name, logo_url from orgs where logo_url is not null;
 
 grant select on public_logo_wall to anon, authenticated;
+
+-- ── Beta invite gate (Google OAuth) ────────────────────────────────
+-- Migration: beta_invites_gate. Google sign-in creates users on first
+-- login, so the whitelist moves to an invite table enforced by
+-- triggers on auth.users. New onboarding (replaces the 3 manual steps
+-- in the header):
+--   1. insert into orgs (name) values ('Org Name') returning id;
+--   2. insert into beta_invites (email, org_id) values ('coach@team.gg', '<org id>');
+-- First sign-in (Google or magic link) auto-inserts org_members.
+-- Uninvited emails are rejected before the auth user is created.
+
+create table beta_invites (
+  email      text primary key check (email = lower(email)),
+  org_id     uuid not null references orgs (id) on delete cascade,
+  invited_at timestamptz not null default now()
+);
+-- No policies on purpose: invites are managed from the dashboard /
+-- service role only; the anon + authenticated keys can read nothing.
+alter table beta_invites enable row level security;
+
+-- Gate: reject creation of any auth user whose email is not invited.
+create or replace function public.gate_new_user()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if new.email is null
+     or not exists (select 1 from beta_invites where email = lower(new.email)) then
+    raise exception 'not invited to the beta';
+  end if;
+  return new;
+end $$;
+
+create trigger beta_gate_before_user_created
+  before insert on auth.users
+  for each row execute function public.gate_new_user();
+
+-- Auto-link: on first sign-in, attach the new user to their invited org.
+create or replace function public.link_new_user()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+declare v_org uuid;
+begin
+  select org_id into v_org from beta_invites where email = lower(new.email);
+  if v_org is not null then
+    insert into org_members (user_id, org_id)
+    values (new.id, v_org)
+    on conflict (user_id) do nothing;
+  end if;
+  return new;
+end $$;
+
+create trigger beta_link_after_user_created
+  after insert on auth.users
+  for each row execute function public.link_new_user();
+
+-- Backfill: every existing member is implicitly invited, so Google
+-- identity-linking keeps working for accounts created by hand.
+insert into beta_invites (email, org_id)
+select lower(u.email), m.org_id
+from auth.users u
+join org_members m on m.user_id = u.id
+where u.email is not null
+on conflict (email) do nothing;
