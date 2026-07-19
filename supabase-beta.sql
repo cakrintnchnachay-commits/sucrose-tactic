@@ -177,3 +177,32 @@ from auth.users u
 join org_members m on m.user_id = u.id
 where u.email is not null
 on conflict (email) do nothing;
+
+-- ── Admin onboarding helper ────────────────────────────────────────
+-- Migration: admin_onboard_helper. One call per team, SQL editor only:
+--   select admin_onboard('coach@team.gg', 'Team Name');
+-- Creates the org if new, upserts the invite, and links the account
+-- immediately if it already exists (pre-gate signups).
+create or replace function public.admin_onboard(p_email text, p_org_name text)
+returns text
+language plpgsql security definer set search_path = public
+as $$
+declare v_org uuid; v_uid uuid;
+begin
+  p_email := lower(trim(p_email));
+  select id into v_org from orgs where name = p_org_name;
+  if v_org is null then
+    insert into orgs (name) values (p_org_name) returning id into v_org;
+  end if;
+  insert into beta_invites (email, org_id) values (p_email, v_org)
+  on conflict (email) do update set org_id = excluded.org_id;
+  select id into v_uid from auth.users where lower(email) = p_email;
+  if v_uid is not null then
+    insert into org_members (user_id, org_id) values (v_uid, v_org)
+    on conflict (user_id) do nothing;
+    return p_email || ' invited + existing account linked to ' || p_org_name;
+  end if;
+  return p_email || ' invited — will be linked to ' || p_org_name || ' on first sign-in';
+end $$;
+-- Admin-only: not callable through the API.
+revoke execute on function public.admin_onboard(text, text) from public, anon, authenticated;
