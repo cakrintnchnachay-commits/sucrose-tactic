@@ -12,7 +12,7 @@
     - Arrow / zone drawing tools with select-and-edit, plus the freehand pen
     - Ward markers with toggleable vision-range circles
     - Vision mode: sight circles on every hero token and standing tower;
-      radii editable in the Board sheet and synced across devices (Supabase)
+      radii editable in the Board sheet and saved to this device (localStorage)
     - Notes saved with each scenario
     - Zoom controls + drag-to-pan for small screens
     - Unified undo/redo across pen strokes and shapes
@@ -21,16 +21,17 @@
   v1 saved scenarios still load (see applyBoardState).
   Tower positions live in TOWER_POSITIONS so they are easy to nudge later.
 -->
-<html lang="en">
+<html lang="th">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"/>
 <meta name="theme-color" content="#0b0b0d"/>
 <title>Tactic Board — Sucrose</title>
+<link rel="icon" href="favicon.ico" sizes="any"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <!-- Supabase library (same CDN version index.html uses) -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.7" integrity="sha384-BmlQlKlDvXvKoxkn5OQuUo/aJQCTXeB+Kls6EccBmG4Kf8AXvp89RtO9MtPxP/r5" crossorigin="anonymous"></script>
 
 <style>
 /* ─────────────────────────────────────────────
@@ -317,7 +318,10 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
 .tour-card .btns{display:flex;gap:8px;}
 .tour-card button{background:var(--accent);color:#0a0a0a;border:none;border-radius:2px;padding:6px 12px;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;}
 .tour-card button.skip{background:none;color:var(--grey-5);padding:6px 4px;}
-:root[lang=th] .btn,:root[lang=th] .section-label,:root[lang=th] .tool-btn span,:root[lang=th] .sheet-head .ttl{letter-spacing:0.3px;}
+:root[lang=th] .btn,:root[lang=th] .section-label,:root[lang=th] .tool-btn span,:root[lang=th] .sheet-head .ttl,
+:root[lang=th] .fs-label,:root[lang=th] .mini-pop .ph,:root[lang=th] .input-label,
+:root[lang=th] #ctxBar .lab,:root[lang=th] .section-label .sub{letter-spacing:0.3px;}
+:root[lang=th] .mini-pop .ph,:root[lang=th] .tour-card,:root[lang=th] .toast{font-family:'IBM Plex Sans Thai','DM Mono',monospace;}
 </style>
 </head>
 <body class="tool-move">
@@ -397,7 +401,7 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
           <button class="src" data-place="summon:vanguard"><span class="vis" id="vgVis"></span><span data-i18n="vanguard">Vanguard</span></button>
           <button class="src" data-place="summon:darkslayer"><span class="vis" id="dsVis"></span><span data-i18n="darkslayer">Darkslayer</span></button>
         </div>
-        <div class="section-label"><span data-i18n="vision-ranges">Vision ranges</span> <span class="sub" data-i18n="vision-ranges-sub">% of map side &middot; synced to all devices</span></div>
+        <div class="section-label"><span data-i18n="vision-ranges">Vision ranges</span> <span class="sub" data-i18n="vision-ranges-sub">% of map side &middot; saved on this device</span></div>
         <div class="size-row">
           <label data-i18n="hero">Hero</label>
           <div class="rr"><input type="range" id="visHero" min="50" max="200" oninput="setVisionR('hero',this.value)"/><span class="val" id="visHeroVal"></span></div>
@@ -444,7 +448,7 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
     <!-- CENTER: MAP -->
     <main id="mapWrap">
       <div id="mapBox">
-        <img id="mapImg" src="assets/tactic-map.png" alt="map" draggable="false"/>
+        <img id="mapImg" src="assets/tactic-map.webp" alt="map" draggable="false"/>
         <!-- towers, objectives, tokens injected here -->
         <svg id="shapeSvg"></svg>
         <canvas id="drawCanvas"></canvas>
@@ -686,8 +690,8 @@ const DRAGON_POS={x:0.639,y:0.609};
 // three). hero/tower were measured from minimap screenshots (2026-07):
 // hero-reveals-hero pairs ≈0.115–0.13, tower-reveals-hero ≈0.085-0.09.
 // These are DEFAULTS — the live values are editable in the Board sheet and
-// synced to every device via Supabase (reserved row in tactic_scenarios),
-// with a localStorage cache.
+// saved to this device only (localStorage). VISION_ROW is a reserved
+// scenario name held for a future cloud-synced version of this setting.
 const VISION_DEFAULTS={hero:0.11,tower:0.10,ward:0.11};
 const VISION_ROW='__vision_settings__';          // reserved scenario name
 // on: {blue,red} — each side's vision toggles independently so a coach can
@@ -714,9 +718,12 @@ const STR={
   'search-hero-ph':{en:'Search hero…',th:'ค้นหาฮีโร่…'},
   'all-heroes':{en:'All heroes',th:'ฮีโร่ทั้งหมด'},
   'recent':{en:'Recent',th:'ล่าสุด'},
+  'pos-all':{en:'All',th:'ทั้งหมด'},
   'no-heroes-match':{en:'No heroes match.',th:'ไม่พบฮีโร่ที่ตรงกัน'},
+  'heroes-supabase-not-loaded':{en:'Supabase did not load — check your connection.',th:'โหลด Supabase ไม่สำเร็จ — เช็คอินเทอร์เน็ตของคุณ'},
+  'heroes-load-failed':{en:'Could not load heroes from the database.',th:'โหลดรายชื่อฮีโร่จากฐานข้อมูลไม่สำเร็จ'},
   'bench':{en:'Bench',th:'ตัวสำรอง'},
-  'bench-sub':{en:'tap a token, then tap the map',th:'แตะตัวละคร แล้วแตะบนแผนที่'},
+  'bench-sub':{en:'tap a token, then tap the map',th:'แตะฮีโร่ แล้วแตะบนแผนที่'},
   'side-blue':{en:'Blue',th:'น้ำเงิน'},
   'side-red':{en:'Red',th:'แดง'},
   'bench-empty':{en:'empty',th:'ว่าง'},
@@ -737,61 +744,62 @@ const STR={
   'vanguard':{en:'Vanguard',th:'แวนการ์ด'},
   'darkslayer':{en:'Darkslayer',th:'ดาร์คสเลเยอร์'},
   'vision-ranges':{en:'Vision ranges',th:'ระยะมองเห็น'},
-  'vision-ranges-sub':{en:'% of map side · synced to all devices',th:'% ของด้านแผนที่ · ซิงก์ทุกอุปกรณ์'},
+  'vision-ranges-sub':{en:'% of map side · saved on this device',th:'% ของด้านแผนที่ · บันทึกไว้ในเครื่องนี้'},
+  'vision-saved-on-device':{en:'saved on this device',th:'บันทึกไว้ในเครื่องนี้'},
   'hero':{en:'Hero',th:'ฮีโร่'},
   'tower':{en:'Tower',th:'ป้อม'},
   'ward':{en:'Ward',th:'วอร์ด'},
   'reset-defaults':{en:'Reset defaults',th:'รีเซ็ตค่าเริ่มต้น'},
   'display':{en:'Display',th:'การแสดงผล'},
-  'token-size':{en:'Token size',th:'ขนาดตัวละคร'},
+  'token-size':{en:'Token size',th:'ขนาดไอคอนฮีโร่'},
   'hero-names':{en:'Hero names',th:'ชื่อฮีโร่'},
   'onion-skin':{en:'Onion skin',th:'เงาสเต็ปก่อนหน้า'},
   'tt-onion-skin':{en:'Ghost the previous step\'s hero positions so you can see what moved',th:'แสดงเงาตำแหน่งฮีโร่จากสเต็ปก่อนหน้า เพื่อดูว่ามีอะไรขยับ'},
-  'towers':{en:'Towers',th:'ป้อมปราการ'},
+  'towers':{en:'Towers',th:'ป้อม'},
   'towers-sub':{en:'tap a lane name to toggle the row',th:'แตะชื่อเลนเพื่อสลับทั้งแถว'},
   'tt-zoom-in':{en:'Zoom in',th:'ซูมเข้า'},
   'tt-zoom-out':{en:'Zoom out',th:'ซูมออก'},
   'cancel':{en:'Cancel',th:'ยกเลิก'},
   'steps':{en:'Steps',th:'สเต็ป'},
-  'tt-add-step':{en:'Duplicate current step — then move pieces to build the play',th:'ทำซ้ำสเต็ปนี้ แล้วขยับตัวละครเพื่อสร้างแผนการเล่น'},
+  'tt-add-step':{en:'Duplicate current step — then move pieces to build the play',th:'คัดลอกสเต็ปนี้ แล้วขยับฮีโร่เพื่อสร้างแผนการเล่น'},
   'tt-play-steps':{en:'Play the steps',th:'เล่นสเต็ปทั้งหมด'},
   'color':{en:'Color',th:'สี'},
   'size':{en:'Size',th:'ขนาด'},
   'clear':{en:'Clear',th:'ล้าง'},
   'move':{en:'Move',th:'ย้าย'},
-  'tt-move':{en:'Move pieces (V)',th:'ย้ายตัวละคร (V)'},
+  'tt-move':{en:'Move pieces (V)',th:'ย้ายฮีโร่ (V)'},
   'pen':{en:'Pen',th:'ปากกา'},
   'tt-pen':{en:'Freehand pen (P)',th:'ปากกาวาดอิสระ (P)'},
   'arrow':{en:'Arrow',th:'ลูกศร'},
   'tt-arrow':{en:'Drag an arrow (A)',th:'ลากลูกศร (A)'},
   'zone':{en:'Zone',th:'โซน'},
   'tt-zone':{en:'Drag a zone (Z)',th:'ลากโซน (Z)'},
-  'erase':{en:'Erase',th:'ลบ'},
+  'erase':{en:'Erase',th:'ยางลบ'},
   'tt-erase':{en:'Erase pen strokes (E)',th:'ลบเส้นปากกา (E)'},
-  'vis-blue':{en:'Vis. Blue',th:'มองเห็น น้ำเงิน'},
+  'vis-blue':{en:'Vis. Blue',th:'วิชั่นน้ำเงิน'},
   'tt-vis-blue':{en:'Show blue hero & tower sight ranges',th:'แสดงระยะมองเห็นฝั่งน้ำเงิน'},
-  'vis-red':{en:'Vis. Red',th:'มองเห็น แดง'},
+  'vis-red':{en:'Vis. Red',th:'วิชั่นแดง'},
   'tt-vis-red':{en:'Show red hero & tower sight ranges',th:'แสดงระยะมองเห็นฝั่งแดง'},
   'undo':{en:'Undo',th:'ย้อนกลับ'},
   'tt-undo':{en:'Undo (Ctrl+Z)',th:'ย้อนกลับ (Ctrl+Z)'},
   'redo':{en:'Redo',th:'ทำซ้ำ'},
   'tt-redo':{en:'Redo (Ctrl+Shift+Z)',th:'ทำซ้ำ (Ctrl+Shift+Z)'},
-  'tt-open-heroes':{en:'Open hero picker',th:'เปิดตัวเลือกฮีโร่'},
+  'tt-open-heroes':{en:'Open hero picker',th:'เปิดแผงเลือกฮีโร่'},
   'tt-remove-bench':{en:'Remove from bench',th:'เอาออกจากตัวสำรอง'},
   'tap-then-map':{en:'Tap, then tap the map',th:'แตะ แล้วแตะบนแผนที่'},
-  'sign-in-required':{en:'Sign in to save and load — this beta is invite-only.',th:'ล็อกอินก่อนเพื่อเซฟและโหลด — เบต้านี้ต้องได้รับเชิญเท่านั้น'},
+  'sign-in-required':{en:'Sign in to save and load — this beta is invite-only.',th:'เข้าสู่ระบบก่อนเพื่อเซฟและโหลด — เบต้ารอบนี้เฉพาะทีมที่ได้รับเชิญ'},
   'no-team-yet':{en:'Your account isn\'t attached to a team yet — saving is disabled until it is.',th:'บัญชีของคุณยังไม่ได้ผูกกับทีม — จะเซฟไม่ได้จนกว่าจะผูกทีมแล้ว'},
   'confirm-logout':{en:'You have unsaved changes — log out anyway?',th:'มีการเปลี่ยนแปลงที่ยังไม่ได้เซฟ — ออกจากระบบเลยไหม?'},
   'placed-drag':{en:'{name} placed — drag it into position.',th:'วาง {name} แล้ว — ลากไปยังตำแหน่งที่ต้องการ'},
   'remove-from-bench':{en:'Remove from bench',th:'เอาออกจากตัวสำรอง'},
-  'switch-to':{en:'Switch to {side}',th:'สลับไปฝั่ง {side}'},
+  'switch-to':{en:'Switch to {side}',th:'สลับไปฝั่ง{side}'},
   'to-bench':{en:'To bench',th:'ไปตัวสำรอง'},
   'remove':{en:'Remove',th:'ลบออก'},
   'show-vision-range':{en:'Show vision range',th:'แสดงระยะมองเห็น'},
   'hide-vision-range':{en:'Hide vision range',th:'ซ่อนระยะมองเห็น'},
   'delete':{en:'Delete',th:'ลบ'},
-  'step-n-added':{en:'Step {n} added — move pieces to build the play.',th:'เพิ่มสเต็ป {n} แล้ว — ขยับตัวละครเพื่อสร้างแผนการเล่น'},
-  'duplicate-step':{en:'Duplicate step {n}',th:'ทำซ้ำสเต็ป {n}'},
+  'step-n-added':{en:'Step {n} added — move pieces to build the play.',th:'เพิ่มสเต็ป {n} แล้ว — ขยับฮีโร่เพื่อสร้างแผนการเล่น'},
+  'duplicate-step':{en:'Duplicate step {n}',th:'คัดลอกสเต็ป {n}'},
   'move-left':{en:'Move left',th:'ย้ายไปทางซ้าย'},
   'move-right':{en:'Move right',th:'ย้ายไปทางขวา'},
   'clear-drawings-step':{en:'Clear drawings on this step',th:'ล้างภาพวาดในสเต็ปนี้'},
@@ -811,7 +819,7 @@ const STR={
   'scenario-name':{en:'Scenario name',th:'ชื่อบอร์ด'},
   'scenario-name-ph':{en:'e.g. Dragon setup vs Team X',th:'เช่น เซ็ตอัพดราก้อน vs ทีม X'},
   'save-overwrite-note':{en:'Saving with an existing name overwrites that scenario. {n} step{s} will be saved.',th:'เซฟด้วยชื่อที่มีอยู่แล้วจะเขียนทับบอร์ดเดิม จะเซฟทั้งหมด {n} สเต็ป'},
-  'name-reserved':{en:'That name is reserved.',th:'ชื่อนี้ถูกสงวนไว้แล้ว'},
+  'name-reserved':{en:'That name is reserved.',th:'ชื่อนี้ถูกสงวนไว้ ใช้ชื่ออื่นแทน'},
   'ask-beta-admin':{en:'Your account isn\'t attached to a team yet — ask the beta admin.',th:'บัญชีของคุณยังไม่ได้ผูกกับทีม — ติดต่อแอดมินเบต้า'},
   'offline-saved':{en:'Offline — saved on this device. Re-save once you\'re back online.',th:'ออฟไลน์ — เซฟไว้ในเครื่องนี้แล้ว เซฟใหม่อีกครั้งเมื่อออนไลน์'},
   'saving':{en:'Saving…',th:'กำลังเซฟ…'},
@@ -826,18 +834,24 @@ const STR={
   'search-scenarios-ph':{en:'Search scenarios…',th:'ค้นหาบอร์ด…'},
   'no-scenarios-match':{en:'No scenarios match.',th:'ไม่พบบอร์ดที่ตรงกัน'},
   'by-name':{en:'by {name}',th:'โดย {name}'},
+  'time-just-now':{en:'just now',th:'เมื่อสักครู่'},
+  'time-mins-ago':{en:'{n}m ago',th:'{n} นาทีที่แล้ว'},
+  'time-hours-ago':{en:'{n}h ago',th:'{n} ชั่วโมงที่แล้ว'},
+  'time-days-ago':{en:'{n}d ago',th:'{n} วันที่แล้ว'},
+  'time-months-ago':{en:'{n}mo ago',th:'{n} เดือนที่แล้ว'},
+  'step-count':{en:'{n} step{s}',th:'{n} สเต็ป'},
   'load-failed':{en:'Load failed: {msg}',th:'โหลดไม่สำเร็จ: {msg}'},
   'loaded-name':{en:'Loaded "{name}"',th:'โหลด "{name}" แล้ว'},
   'confirm-delete-scenario':{en:'Delete this scenario?',th:'ลบบอร์ดนี้เลยไหม?'},
   'tip-rotate':{en:'Tip: rotate your phone for a bigger board.',th:'เคล็ดลับ: หมุนมือถือแนวนอนเพื่อบอร์ดที่ใหญ่ขึ้น'},
   'tour-1-t':{en:'Pick heroes here',th:'เลือกฮีโร่ที่นี่'},
   'tour-1-b':{en:'Open the Heroes panel to search and tap a hero, then tap the map to place it.',th:'เปิดแผงฮีโร่เพื่อค้นหาและแตะเลือกฮีโร่ แล้วแตะบนแผนที่เพื่อวาง'},
-  'tour-2-t':{en:'Drag pieces around',th:'ลากตัวละครไปมา'},
-  'tour-2-b':{en:'Heroes, wards and objectives can be dragged straight on the map with the Move tool.',th:'ฮีโร่ วอร์ด และออบเจกทีฟลากได้ตรงบนแผนที่ด้วยเครื่องมือ Move'},
+  'tour-2-t':{en:'Drag pieces around',th:'ลากฮีโร่ไปมา'},
+  'tour-2-b':{en:'Heroes, wards and objectives can be dragged straight on the map with the Move tool.',th:'ฮีโร่ วอร์ด และออบเจกทีฟลากได้ตรงบนแผนที่ด้วยเครื่องมือ "ย้าย" (Move)'},
   'tour-3-t':{en:'Steps build a play',th:'สเต็ปสร้างแผนการเล่น'},
-  'tour-3-b':{en:'Each "step" chip at the bottom is a snapshot. Add steps and move pieces between them to animate a play.',th:'แต่ละสเต็ปด้านล่างคือภาพสแนปช็อต เพิ่มสเต็ปแล้วขยับตัวละครเพื่อทำแอนิเมชันแผนการเล่น'},
+  'tour-3-b':{en:'Each "step" chip at the bottom is a snapshot. Add steps and move pieces between them to animate a play.',th:'แต่ละสเต็ปด้านล่างคือภาพสแนปช็อต เพิ่มสเต็ปแล้วขยับฮีโร่เพื่อทำแอนิเมชันแผนการเล่น'},
   'tour-4-t':{en:'Save your scenario',th:'เซฟบอร์ดของคุณ'},
-  'tour-4-b':{en:'Hit Save any time to store the board. Load brings back any saved scenario later.',th:'กด Save เมื่อไหร่ก็ได้เพื่อเก็บบอร์ดไว้ ส่วน Load จะดึงบอร์ดที่เซฟไว้กลับมา'},
+  'tour-4-b':{en:'Hit Save any time to store the board. Load brings back any saved scenario later.',th:'กดปุ่ม "เซฟ" เมื่อไหร่ก็ได้เพื่อเก็บบอร์ดไว้ ส่วน "โหลด" จะดึงบอร์ดที่เซฟไว้กลับมา'},
   'skip':{en:'Skip',th:'ข้าม'},
   'next':{en:'Next',th:'ถัดไป'},
   'got-it':{en:'Got it',th:'เข้าใจแล้ว'},
@@ -845,9 +859,11 @@ const STR={
 let LANG=localStorage.getItem('tactic_lang')||'th';
 function t(k){const s=STR[k];return s?(s[LANG]||s.en):k;}
 function tf(k,vars){let s=t(k);Object.keys(vars||{}).forEach(v=>{s=s.split('{'+v+'}').join(vars[v]);});return s;}
-function setLang(l){LANG=l;localStorage.setItem('tactic_lang',l);document.documentElement.lang=LANG;applyI18n();renderAll();syncLangBtn();}
+function sideLabel(team){ return LANG==='en'?team.toUpperCase():t(team==='blue'?'side-blue':'side-red'); }
+function wardLabel(team){ return t(team==='blue'?'blue-ward':'red-ward'); }
+function setLang(l){LANG=l;localStorage.setItem('tactic_lang',l);document.documentElement.lang=LANG;applyI18n();renderAll();renderHeroGrid();syncLangBtn();}
 function syncLangBtn(){const b=$('btnLang');if(b)b.textContent=LANG==='th'?'EN':'ไทย';}
-function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=t(el.dataset.i18nPh);});document.querySelectorAll('[data-i18n-title]').forEach(el=>{el.title=t(el.dataset.i18nTitle);});}
+function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=t(el.dataset.i18nPh);});document.querySelectorAll('[data-i18n-title]').forEach(el=>{el.title=t(el.dataset.i18nTitle);});const allTab=document.querySelector('#posTabs .tab[data-pos="All"]');if(allTab)allTab.textContent=t('pos-all');}
 
 // ════════════════════════════════════════════════════════════════
 //  ICONS  (inline SVG, stroke = currentColor)
@@ -938,7 +954,7 @@ function heroImgTag(name){
 // ════════════════════════════════════════════════════════════════
 async function loadData(){
   if(!sb){ $('heroGrid').innerHTML=
-    '<div class="note" style="grid-column:1/-1;">Supabase did not load — check your connection.</div>'; return; }
+    '<div class="note" style="grid-column:1/-1;">'+esc(t('heroes-supabase-not-loaded'))+'</div>'; return; }
   try{
     const {data,error}=await sb.from('heroes').select('name,roles').order('name');
     if(error)throw error;
@@ -953,7 +969,7 @@ async function loadData(){
   }catch(e){
     console.warn('heroes load failed',e);
     $('heroGrid').innerHTML=
-      '<div class="note" style="grid-column:1/-1;">Could not load heroes from the database.</div>';
+      '<div class="note" style="grid-column:1/-1;">'+esc(t('heroes-load-failed'))+'</div>';
   }
   renderHeroGrid();
 }
@@ -990,8 +1006,9 @@ function buildStaticUI(){
 
   const pt=$('posTabs');
   ['All',...POSITIONS].forEach(p=>{
-    const b=document.createElement('div'); b.className='tab'+(p==='All'?' active':''); b.textContent=p;
-    b.onclick=()=>{ state.posFilter=p; document.querySelectorAll('#posTabs .tab').forEach(x=>x.classList.toggle('active',x.textContent===p)); renderHeroGrid(); };
+    const b=document.createElement('div'); b.className='tab'+(p==='All'?' active':''); b.dataset.pos=p;
+    b.textContent=p==='All'?t('pos-all'):p;
+    b.onclick=()=>{ state.posFilter=p; document.querySelectorAll('#posTabs .tab').forEach(x=>x.classList.toggle('active',x.dataset.pos===p)); renderHeroGrid(); };
     pt.appendChild(b);
   });
 
@@ -1278,16 +1295,16 @@ function pieceCenter(id){ const el=$(id); if(!el)return {cx:null,cy:null}; const
 function openTokenMenu(h){
   const other=h.team==='blue'?'red':'blue'; const c=pieceCenter(h.id);
   miniMenu(h.hero,[
-    {label:tf('switch-to',{side:other.toUpperCase()}),fn:()=>{h.team=other;renderMap();markDirty();}},
+    {label:tf('switch-to',{side:sideLabel(other)}),fn:()=>{h.team=other;renderMap();markDirty();}},
     {label:t('to-bench'),fn:()=>{ F().heroes=F().heroes.filter(x=>x.id!==h.id); state.bench[h.team].push({id:uid(),hero:h.hero}); renderMap(); renderBench(); markDirty(); }},
     {label:t('remove'),style:'border-color:var(--red);color:var(--red);',fn:()=>{ F().heroes=F().heroes.filter(x=>x.id!==h.id); renderMap(); markDirty(); }},
   ],c.cx,c.cy);
 }
 function openWardMenu(w){
   const other=w.team==='blue'?'red':'blue'; const c=pieceCenter(w.id);
-  miniMenu((t(w.team==='blue'?'side-blue':'side-red')+' '+t('ward')).toUpperCase(),[
+  miniMenu(wardLabel(w.team).toUpperCase(),[
     {label:t(w.range?'hide-vision-range':'show-vision-range'),fn:()=>{w.range=!w.range;renderShapes();markDirty();}},
-    {label:tf('switch-to',{side:other.toUpperCase()}),fn:()=>{w.team=other;renderMap();renderShapes();markDirty();}},
+    {label:tf('switch-to',{side:sideLabel(other)}),fn:()=>{w.team=other;renderMap();renderShapes();markDirty();}},
     {label:t('remove'),style:'border-color:var(--red);color:var(--red);',fn:()=>{ F().wards=F().wards.filter(x=>x.id!==w.id); renderMap(); renderShapes(); markDirty(); }},
   ],c.cx,c.cy);
 }
@@ -1323,7 +1340,7 @@ mapBox.addEventListener('drop',e=>{
 function startPending(p){
   state.pending=p;
   highlightPending();
-  const label=p.kind==='bench'?p.hero : p.kind==='ward'?(t(p.team==='blue'?'side-blue':'side-red')+' '+t('ward')) : (p.type==='vanguard'?t('vanguard'):t('darkslayer'));
+  const label=p.kind==='bench'?p.hero : p.kind==='ward'?wardLabel(p.team) : (p.type==='vanguard'?t('vanguard'):t('darkslayer'));
   $('pendingTxt').textContent=tf('tap-place',{label:label});
   $('pendingPill').style.display='flex';
   closeSheets();
@@ -1568,7 +1585,7 @@ function renderSelPill(){
   const s=F().shapes.find(x=>x.id===state.sel); if(!s)return;
   const d=document.createElement('div'); d.id='selPill';
   d.style.left=((s.x1+s.x2)/2*100)+'%'; d.style.top=(Math.min(s.y1,s.y2)*100)+'%';
-  d.innerHTML='<button class="btn btn-sm btn-danger">Delete</button>';
+  d.innerHTML='<button class="btn btn-sm btn-danger">'+esc(t('delete'))+'</button>';
   d.querySelector('button').onclick=e=>{ e.stopPropagation(); deleteShape(s.id); };
   d.addEventListener('pointerdown',e=>e.stopPropagation());
   mapBox.appendChild(d);
@@ -1930,7 +1947,7 @@ function saveVisionLocal(){
 // Beta: vision settings live on this device only (localStorage). Cloud
 // sync returns with the org-scoped scenarios port (Phase 3).
 function scheduleVisionSync(){
-  $('visSyncState').textContent='saved on this device';
+  $('visSyncState').textContent=t('vision-saved-on-device');
 }
 async function loadVisionSettings(){
   try{
@@ -2023,7 +2040,7 @@ function buildPreview(){
   if(state.frames.length>1){
     x.fillStyle='rgba(8,8,8,.8)'; x.fillRect(W-74,H-22,74,22);
     x.fillStyle='#44ff88'; x.font='10px monospace'; x.textAlign='center'; x.textBaseline='middle';
-    x.fillText(state.frames.length+' steps',W-37,H-11);
+    x.fillText(tf('step-count',{n:state.frames.length,s:state.frames.length>1?'s':''}),W-37,H-11);
   }
   return c.toDataURL('image/jpeg',0.7);
 }
@@ -2272,11 +2289,11 @@ function parseTag(name){
 function relTime(iso){
   if(!iso)return '';
   const s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
-  if(s<60)return 'just now';
-  if(s<3600)return Math.floor(s/60)+'m ago';
-  if(s<86400)return Math.floor(s/3600)+'h ago';
-  if(s<2592000)return Math.floor(s/86400)+'d ago';
-  return Math.floor(s/2592000)+'mo ago';
+  if(s<60)return t('time-just-now');
+  if(s<3600)return tf('time-mins-ago',{n:Math.floor(s/60)});
+  if(s<86400)return tf('time-hours-ago',{n:Math.floor(s/3600)});
+  if(s<2592000)return tf('time-days-ago',{n:Math.floor(s/86400)});
+  return tf('time-months-ago',{n:Math.floor(s/2592000)});
 }
 async function openLoad(){
   if(!sb)return toast(t('supabase-not-loaded'),true);
@@ -2306,7 +2323,7 @@ async function openLoad(){
       return '<div class="scenario-card" data-id="'+s.id+'" data-name="'+esc(s.name.toLowerCase())+'" data-tag="'+esc(tag)+'">'+
       '<img src="'+esc(/^data:image\//.test(s.preview_image||'')?s.preview_image:'')+'" alt="" onerror="this.style.background=\'#111\'"/>'+
       '<div class="cap"><span class="nmm">'+(tag?'<span class="tag-badge">'+esc(tag)+'</span> ':'')+esc(rest)+'</span>'+
-      '<span class="steps">'+steps+' step'+(steps>1?'s':'')+'</span>'+
+      '<span class="steps">'+esc(tf('step-count',{n:steps,s:steps>1?'s':''}))+'</span>'+
       '<span class="del" data-del="'+s.id+'" title="'+esc(t('delete'))+'">✕</span></div>'+
       '<div class="cap sub"><span class="when">'+(who?esc(tf('by-name',{name:who}))+' · ':'')+relTime(s.updated_at)+'</span></div></div>';
     }).join('')+'</div>'+

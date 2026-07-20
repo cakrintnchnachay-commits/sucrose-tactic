@@ -9,8 +9,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#0b0b0d"/>
 <title>Sucrose Tactic — กระดานแทคติกสำหรับทีมอีสปอร์ต</title>
+<meta name="description" content="กระดานแทคติกสำหรับทีม RoV — วางฮีโร่ วาดแผน เดินสเต็ปทีละขั้น เซฟบอร์ดแยกตามทีม เบต้ารอบนี้เฉพาะทีมที่ได้รับเชิญ"/>
+<meta property="og:type" content="website"/>
+<meta property="og:title" content="Sucrose Tactic — กระดานแทคติกสำหรับทีมอีสปอร์ต"/>
+<meta property="og:description" content="กระดานแทคติกสำหรับทีม RoV — วางฮีโร่ วาดแผน เดินสเต็ปทีละขั้น เซฟบอร์ดแยกตามทีม"/>
+<meta property="og:image" content="https://cakrintnchnachay-commits.github.io/sucrose-tactic/assets/screen-board.jpg"/>
+<meta property="og:url" content="https://cakrintnchnachay-commits.github.io/sucrose-tactic/"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<link rel="icon" href="favicon.ico" sizes="any"/>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.110.7" integrity="sha384-BmlQlKlDvXvKoxkn5OQuUo/aJQCTXeB+Kls6EccBmG4Kf8AXvp89RtO9MtPxP/r5" crossorigin="anonymous"></script>
 <style>
 :root{
   --bg:#0b0b0d; --panel:#141416; --ink:#f4f4f0; --mut:#8a8a90;
@@ -216,7 +224,7 @@ async function loadWall(){
 }
 
 async function boot(){
-  if(!sb){ say('โหลดระบบเข้าสู่ระบบไม่สำเร็จ — เช็คอินเทอร์เน็ตแล้วรีเฟรช','err'); return; }
+  if(!sb){ say('ระบบเข้าสู่ระบบโหลดไม่สำเร็จ — เช็คอินเทอร์เน็ตแล้วรีเฟรชหน้านี้','err'); return; }
   const hadErr=checkLinkError();
   const {data:{session}}=await sb.auth.getSession();
   if(session && !hadErr){ location.replace('board.html'); return; }
