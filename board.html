@@ -29,10 +29,6 @@
 <title>Tactic Board — Sucrose</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&family=IBM+Plex+Sans+Thai:wght@300;400;500;600&display=swap" rel="stylesheet">
 
-<!-- Shared site chrome. Loaded BEFORE the inline <style> on purpose: nav.css
-     defines its own :root --black/--white, and this page's palette must win. -->
-<link rel="stylesheet" href="nav.css">
-
 <!-- Supabase library (same CDN version index.html uses) -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -807,20 +803,24 @@ const STR={
   'map-not-loaded':{en:'Map image not loaded yet — try again in a moment.',th:'ยังโหลดรูปแผนที่ไม่เสร็จ — รอสักครู่แล้วลองใหม่'},
   'building-image':{en:'Building image…',th:'กำลังสร้างรูปภาพ…'},
   'exported-name':{en:'Exported "{name}.png"',th:'ส่งออก "{name}.png" แล้ว'},
-  'offline-restore-prompt':{en:'{n} local save{s} saved while offline — restore the latest?',th:'มี {n} รายการเซฟออฟไลน์{s} — กู้คืนรายการล่าสุดไหม?'},
+  'offline-restore-prompt':{en:'{n} local save{s} saved while offline — restore the latest?',th:'มี {n} รายการที่เซฟไว้ออฟไลน์ — กู้คืนรายการล่าสุดไหม?'},
   'restore':{en:'Restore',th:'กู้คืน'},
   'restored-name':{en:'Restored "{name}" — Save again once you\'re online to sync it.',th:'กู้คืน "{name}" แล้ว — เซฟอีกครั้งตอนออนไลน์เพื่อซิงก์ข้อมูล'},
   'supabase-not-loaded':{en:'Supabase library not loaded.',th:'โหลดไลบรารี Supabase ไม่สำเร็จ'},
   'save-scenario':{en:'Save scenario',th:'เซฟบอร์ด'},
   'scenario-name':{en:'Scenario name',th:'ชื่อบอร์ด'},
   'scenario-name-ph':{en:'e.g. Dragon setup vs Team X',th:'เช่น เซ็ตอัพดราก้อน vs ทีม X'},
-  'save-overwrite-note':{en:'Saving with an existing name overwrites that scenario. {n} step{s} will be saved.',th:'เซฟด้วยชื่อที่มีอยู่แล้วจะเขียนทับบอร์ดเดิม จะเซฟทั้งหมด {n} สเต็ป{s}'},
+  'save-overwrite-note':{en:'Saving with an existing name overwrites that scenario. {n} step{s} will be saved.',th:'เซฟด้วยชื่อที่มีอยู่แล้วจะเขียนทับบอร์ดเดิม จะเซฟทั้งหมด {n} สเต็ป'},
   'name-reserved':{en:'That name is reserved.',th:'ชื่อนี้ถูกสงวนไว้แล้ว'},
   'ask-beta-admin':{en:'Your account isn\'t attached to a team yet — ask the beta admin.',th:'บัญชีของคุณยังไม่ได้ผูกกับทีม — ติดต่อแอดมินเบต้า'},
   'offline-saved':{en:'Offline — saved on this device. Re-save once you\'re back online.',th:'ออฟไลน์ — เซฟไว้ในเครื่องนี้แล้ว เซฟใหม่อีกครั้งเมื่อออนไลน์'},
   'saving':{en:'Saving…',th:'กำลังเซฟ…'},
   'save-server-failed':{en:'Couldn\'t reach the server — saved on this device instead.',th:'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้ — เซฟไว้ในเครื่องนี้แทน'},
+  'offline-save-failed':{en:'Couldn\'t save on this device either (storage full). Try Export PNG instead.',th:'เซฟลงเครื่องนี้ก็ไม่สำเร็จ (พื้นที่เก็บข้อมูลเต็ม) ลองส่งออกเป็น PNG แทน'},
   'saved-name':{en:'Saved "{name}"',th:'เซฟ "{name}" แล้ว'},
+  'confirm-load-over-unsaved':{en:'You have unsaved changes. Load this scenario and discard them?',th:'คุณยังไม่ได้เซฟการเปลี่ยนแปลงล่าสุด ต้องการโหลดบอร์ดนี้ทับหรือไม่?'},
+  'confirm-overwrite-scenario':{en:'"{name}" already exists (last saved {when}). Overwrite it?',th:'"{name}" มีอยู่แล้ว (เซฟล่าสุด {when}) ต้องการเขียนทับหรือไม่?'},
+  'delete-failed':{en:'Couldn\'t delete — check your connection and try again.',th:'ลบไม่สำเร็จ — เช็คอินเทอร์เน็ตแล้วลองใหม่'},
   'load-scenario':{en:'Load scenario',th:'โหลดบอร์ด'},
   'no-saved-scenarios':{en:'No saved scenarios yet.',th:'ยังไม่มีบอร์ดที่เซฟไว้'},
   'search-scenarios-ph':{en:'Search scenarios…',th:'ค้นหาบอร์ด…'},
@@ -2104,7 +2104,7 @@ async function exportPNG(){
     const col=w.team==='blue'?'#4488FF':'#FF4444', c0=imgToWorld(w.x,w.y), N=44;
     x.beginPath();
     for(let i=0;i<=N;i++){
-      const a=i/N*2*Math.PI, p=worldToImg(c0.u+WARD_RANGE_W*Math.cos(a), c0.v+WARD_RANGE_W*Math.sin(a));
+      const a=i/N*2*Math.PI, p=worldToImg(c0.u+vision.r.ward*Math.cos(a), c0.v+vision.r.ward*Math.sin(a));
       const px2=p.x*W, py2=p.y*H; i?x.lineTo(px2,py2):x.moveTo(px2,py2);
     }
     x.closePath(); x.fillStyle=col; x.globalAlpha=0.07; x.fill(); x.globalAlpha=1;
@@ -2188,10 +2188,10 @@ function pushOfflineSave(payload){
   let arr=offlineSaves();
   arr.push(Object.assign({},payload,{savedAt:new Date().toISOString()}));
   if(arr.length>10)arr=arr.slice(arr.length-10);
-  try{ localStorage.setItem(OFFLINE_KEY,JSON.stringify(arr)); }catch(e){}
+  try{ localStorage.setItem(OFFLINE_KEY,JSON.stringify(arr)); return true; }catch(e){ return false; }
 }
-function removeOfflineSave(i){
-  const arr=offlineSaves(); arr.splice(i,1);
+function clearOfflineSavesByName(name){
+  const arr=offlineSaves().filter(s=>s.name!==name);
   try{ localStorage.setItem(OFFLINE_KEY,JSON.stringify(arr)); }catch(e){}
 }
 function checkOfflineSaves(){
@@ -2202,7 +2202,7 @@ function checkOfflineSaves(){
     label:t('restore'),
     fn:()=>{
       applyBoardState(latest.board_state); state.scnName=latest.name;
-      removeOfflineSave(arr.length-1);
+      dirty=true; // keep the offline cache entry until a real Save succeeds
       toast(tf('restored-name',{name:latest.name}));
     }
   });
@@ -2219,35 +2219,44 @@ async function openSave(){
     '<button class="btn btn-primary" id="svGo" style="width:100%;">'+esc(t('save-scenario'))+'</button>',
     (modal)=>{
       const inp=modal.querySelector('#svName');
+      const btn=modal.querySelector('#svGo');
       const go=async()=>{
+        if(btn.disabled)return; // guards against double-click / double-submit
         const name=inp.value.trim(); if(!name)return inp.focus();
         if(name===VISION_ROW)return toast(t('name-reserved'),true);
         if(!ME.orgId)return toast(t('ask-beta-admin'),true);
+        btn.disabled=true; btn.textContent=t('saving');
+        const release=()=>{ btn.disabled=false; btn.textContent=t('save-scenario'); };
         // "[tag] Name" in the input becomes a real tags entry
         const {tag,rest}=parseTag(name);
         const payload={org_id:ME.orgId,name:rest||name,tags:tag?[tag]:[],
           board_state:boardState(),preview_image:buildPreview(),
           updated_by:ME.userId,updated_at:new Date().toISOString()};
-        const goOffline=(msg)=>{
-          pushOfflineSave(payload); state.scnName=name; dirty=false; closeModal();
-          toast(msg,true);
+        const goOffline=(msg,ok)=>{
+          state.scnName=name; dirty=!ok; closeModal();
+          toast(ok?msg:t('offline-save-failed'),true);
         };
-        if(!navigator.onLine)return goOffline(t('offline-saved'));
+        if(!navigator.onLine)return goOffline(t('offline-saved'),pushOfflineSave(payload));
         toast(t('saving'));
         try{
-          let {data:existing,error:selErr}=await sb.from('scenarios').select('id').eq('name',payload.name).limit(1);
+          let {data:existing,error:selErr}=await sb.from('scenarios').select('id,updated_at').eq('org_id',ME.orgId).eq('name',payload.name).limit(1);
           if(selErr)throw new Error(selErr.message);
-          let res;
-          if(existing&&existing.length){ res=await sb.from('scenarios').update(payload).eq('id',existing[0].id); }
-          else { res=await sb.from('scenarios').insert(payload); }
-          if(res.error)throw new Error(res.error.message);
+          if(existing&&existing.length){
+            if(!confirm(tf('confirm-overwrite-scenario',{name:payload.name,when:relTime(existing[0].updated_at)}))){ release(); return; }
+            const res=await sb.from('scenarios').update(payload).eq('id',existing[0].id);
+            if(res.error)throw new Error(res.error.message);
+          }else{
+            const res=await sb.from('scenarios').insert(payload);
+            if(res.error)throw new Error(res.error.message);
+          }
         }catch(e){
-          return goOffline(t('save-server-failed'));
+          return goOffline(t('save-server-failed'),pushOfflineSave(payload));
         }
+        clearOfflineSavesByName(payload.name);
         state.scnName=name; dirty=false; closeModal();
         toast(tf('saved-name',{name:name}));
       };
-      modal.querySelector('#svGo').onclick=go;
+      btn.onclick=go;
       inp.addEventListener('keydown',e=>{ if(e.key==='Enter')go(); });
       setTimeout(()=>inp.focus(),60);
     });
@@ -2328,6 +2337,7 @@ async function openLoad(){
       grid.querySelectorAll('.scenario-card').forEach(card=>{
         card.addEventListener('click',e=>{
           if(e.target.dataset.del)return;
+          if(dirty&&!confirm(t('confirm-load-over-unsaved')))return;
           const rec=data.find(d=>String(d.id)===card.dataset.id);
           applyBoardState(rec.board_state); state.scnName=rec.name;
           closeModal(); toast(tf('loaded-name',{name:rec.name}));
@@ -2337,7 +2347,8 @@ async function openLoad(){
         e.stopPropagation();
         if(!await requireSession())return;
         if(!confirm(t('confirm-delete-scenario')))return;
-        await sb.from('scenarios').delete().eq('id',d.dataset.del);
+        const {error}=await sb.from('scenarios').delete().eq('id',d.dataset.del);
+        if(error)return toast(t('delete-failed'),true);
         e.target.closest('.scenario-card').remove();
         applyFilter();
       }));
