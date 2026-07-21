@@ -497,7 +497,7 @@ body.tool-arrow #ctxSize,body.tool-zone #ctxSize{display:none;}
   </nav>
 </div>
 <div id="backdrop" onclick="closeSheets()"></div>
-<div id="tourBg" onclick="tourSkip()"></div>
+<div id="tourBg" onclick="tourSkip('backdrop')"></div>
 <div id="tourSpot"></div>
 <div class="tour-card" id="tourCard" style="display:none;" onclick="event.stopPropagation()"></div>
 
@@ -894,7 +894,7 @@ function t(k){const s=STR[k];return s?(s[LANG]||s.en):k;}
 function tf(k,vars){let s=t(k);Object.keys(vars||{}).forEach(v=>{s=s.split('{'+v+'}').join(vars[v]);});return s;}
 function sideLabel(team){ return LANG==='en'?team.toUpperCase():t(team==='blue'?'side-blue':'side-red'); }
 function wardLabel(team){ return t(team==='blue'?'blue-ward':'red-ward'); }
-function setLang(l){LANG=l;localStorage.setItem('tactic_lang',l);document.documentElement.lang=LANG;applyI18n();renderAll();renderHeroGrid();syncLangBtn();}
+function setLang(l){LANG=l;localStorage.setItem('tactic_lang',l);document.documentElement.lang=LANG;applyI18n();renderAll();renderHeroGrid();syncLangBtn();track('lang_switch',{to:l});}
 function syncLangBtn(){const b=$('btnLang');if(b)b.textContent=LANG==='th'?'EN':'ไทย';}
 function applyI18n(){document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n);});document.querySelectorAll('[data-i18n-ph]').forEach(el=>{el.placeholder=t(el.dataset.i18nPh);});document.querySelectorAll('[data-i18n-title]').forEach(el=>{el.title=t(el.dataset.i18nTitle);});const allTab=document.querySelector('#posTabs .tab[data-pos="All"]');if(allTab)allTab.textContent=t('pos-all');}
 
@@ -1833,6 +1833,7 @@ function addFrame(){
   state.cur++;
   renderAll(); markDirty();
   toast(tf('step-n-added',{n:state.cur+1}));
+  track('frame_add',{total:state.frames.length});   // Q1 — user-facing handler only (not loadScenario's state rebuild)
 }
 function openFrameMenu(i,cx,cy){
   if(i!==state.cur)setFrame(i);
@@ -1848,6 +1849,7 @@ function openFrameMenu(i,cx,cy){
       state.cur=Math.min(state.cur,state.frames.length-1);
       hist.undo=[]; hist.redo=[];   // frame indices shift — drop stale history
       renderAll(); markDirty();
+      track('frame_delete',{total:state.frames.length});   // Q1
     }});
   miniMenu(tf('step-n',{n:state.cur+1}),items,cx,cy);
 }
@@ -1862,7 +1864,8 @@ function moveFrame(from,to){
 // playback: glide pieces between consecutive steps via CSS transitions
 async function togglePlay(){
   if(state.playing){ state.playing=false; return; }
-  if(state.frames.length<2){ toast(t('add-second-step')); return; }
+  if(state.frames.length<2){ toast(t('add-second-step')); track('playback_blocked'); return; }   // Q2 — wanted playback, nothing to play
+  track('playback_start',{frames:state.frames.length});   // Q2 — togglePlay, NOT setFrame (which fires per-frame during playback)
   state.playing=true; cancelPending(); setSel(null); closePop();
   $('btnPlay').classList.add('playing'); $('btnPlay').innerHTML=ICONS.stop;
   state.cur=0; renderAll();
@@ -2106,7 +2109,7 @@ async function downloadCanvas(c,filename){
   if(!blob) return toast(t('export-failed'),true);
   const file=new File([blob],filename,{type:'image/png'});
   if(navigator.canShare&&navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file],title:filename}); return; }catch(e){ /* user cancelled or unsupported — fall through */ }
+    try{ await navigator.share({files:[file],title:filename}); track('export_shared'); return; }catch(e){ /* user cancelled or unsupported — fall through */ }   // Q3 — native share vs file download
   }
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download=filename;
@@ -2114,6 +2117,7 @@ async function downloadCanvas(c,filename){
   setTimeout(()=>URL.revokeObjectURL(url),4000);
 }
 async function exportPNG(){
+  track('export_png',{frames:state.frames.length, cur:state.cur});   // Q3
   if(!mapImg.naturalWidth) return toast(t('map-not-loaded'),true);
   toast(t('building-image'));
   const W=mapImg.naturalWidth, H=mapImg.naturalHeight, k=W/mapW;
@@ -2286,13 +2290,15 @@ async function openSave(){
           state.scnName=name; dirty=!ok; closeModal();
           toast(ok?msg:t('offline-save-failed'),true);
         };
-        if(!navigator.onLine)return goOffline(t('offline-saved'),pushOfflineSave(payload));
+        if(!navigator.onLine){ const ok=pushOfflineSave(payload); track('scenario_save_failed',{reason:ok?'offline':'quota'}); return goOffline(t('offline-saved'),ok); }
         toast(t('saving'));
+        let overwrote=false;   // update vs insert — feeds scenario_save.overwrite
         try{
           let {data:existing,error:selErr}=await sb.from('scenarios').select('id,updated_at').eq('org_id',ME.orgId).eq('name',payload.name).limit(1);
           if(selErr)throw new Error(selErr.message);
           if(existing&&existing.length){
             if(!confirm(tf('confirm-overwrite-scenario',{name:payload.name,when:relTime(existing[0].updated_at)}))){ release(); return; }
+            overwrote=true;
             const res=await sb.from('scenarios').update(payload).eq('id',existing[0].id);
             if(res.error)throw new Error(res.error.message);
           }else{
@@ -2300,11 +2306,15 @@ async function openSave(){
             if(res.error)throw new Error(res.error.message);
           }
         }catch(e){
+          const reason=/row-level|rls|policy/i.test(String(e&&e.message))?'rls':'other';   // server rejection reason (local-cache quota is measured on the offline path)
+          track('scenario_save_failed',{reason});
           return goOffline(t('save-server-failed'),pushOfflineSave(payload));
         }
         clearOfflineSavesByName(payload.name);
         state.scnName=name; dirty=false; closeModal();
         toast(tf('saved-name',{name:name}));
+        // Q1 depth signal. Counts/bools only — never payload.name or notes text.
+        track('scenario_save',{frames:state.frames.length, has_notes:!!(state.notes&&state.notes.trim()), overwrite:overwrote, tokens:F().heroes.length});
       };
       btn.onclick=go;
       inp.addEventListener('keydown',e=>{ if(e.key==='Enter')go(); });
@@ -2391,6 +2401,7 @@ async function openLoad(){
           const rec=data.find(d=>String(d.id)===card.dataset.id);
           applyBoardState(rec.board_state); state.scnName=rec.name;
           closeModal(); toast(tf('loaded-name',{name:rec.name}));
+          track('scenario_load',{frames:state.frames.length, age_days:rec.updated_at?Math.floor((Date.now()-new Date(rec.updated_at).getTime())/86400000):null});   // Q5 — are saves revisited or write-only?
         });
       });
       grid.querySelectorAll('.del').forEach(d=>d.addEventListener('click',async e=>{
@@ -2399,6 +2410,7 @@ async function openLoad(){
         if(!confirm(t('confirm-delete-scenario')))return;
         const {error}=await sb.from('scenarios').delete().eq('id',d.dataset.del);
         if(error)return toast(t('delete-failed'),true);
+        track('scenario_delete');   // Q5
         e.target.closest('.scenario-card').remove();
         applyFilter();
       }));
@@ -2519,15 +2531,18 @@ function positionTour(){
 }
 function tourNext(){
   _tourI++;
-  if(_tourI>=TOUR_STEPS.length){ tourSkip(); return; }
+  if(_tourI>=TOUR_STEPS.length){ tourSkip('finished'); return; }
+  track('tour_step',{i:_tourI});   // Q4 — drop-off histogram
   showTourStep();
 }
-function tourSkip(){
+function tourSkip(how){
+  const wasOn=$('tourBg').classList.contains('on');   // only log a genuine end, never a stray/duplicate close
   $('tourBg').classList.remove('on','dim');
   $('tourSpot').classList.remove('on');
   if(_tourResize){ window.removeEventListener('resize',_tourResize); _tourResize=null; }
   $('tourCard').style.display='none';
   localStorage.setItem('tactic_seen_help','1');
+  if(wasOn) track('tour_end',{i:_tourI, how:how||'skipped'});   // Q4 — 'backdrop' measures the stray-tap-kills-onboarding suspicion
 }
 
 // ════════════════════════════════════════════════════════════════
