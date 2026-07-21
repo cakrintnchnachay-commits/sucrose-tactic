@@ -528,6 +528,38 @@ async function requireSession(){
 // user's org in the topbar (org name comes through RLS, so a member can
 // only ever see their own org).
 const ME={userId:null,orgId:null,name:null};   // filled by initAuth
+
+// ══════════════════════════════════════════════════════════════
+//  INSTRUMENTATION — batched, fire-and-forget. Must never throw
+//  into a user action: every call site is wrapped, every failure
+//  is swallowed. Losing an event is fine; breaking Save is not.
+//  Counts and enums in props only — never a scenario name, note,
+//  display name, or email (see INSTRUMENTATION-PLAN.md PII rule).
+// ══════════════════════════════════════════════════════════════
+const SESSION_ID=Math.random().toString(36).slice(2)+Date.now().toString(36);
+let _evQ=[], _evTimer=null;
+
+function track(name,props){
+  try{
+    if(!sb||!ME.userId)return;                  // pre-auth events are dropped
+    _evQ.push({user_id:ME.userId, org_id:ME.orgId||null,
+               name, props:props||{}, session_id:SESSION_ID});
+    if(_evQ.length>=10)return flushEvents();
+    if(!_evTimer)_evTimer=setTimeout(flushEvents,5000);
+  }catch(e){}
+}
+
+async function flushEvents(){
+  clearTimeout(_evTimer); _evTimer=null;
+  if(!_evQ.length)return;
+  const batch=_evQ; _evQ=[];
+  try{ await sb.from('events').insert(batch); }catch(e){}
+}
+
+addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden')flushEvents();
+});
+
 async function initAuth(){
   if(!sb){ location.replace('index.html'); return; }
   const {data:{session}}=await sb.auth.getSession();
@@ -548,6 +580,7 @@ async function initAuth(){
     }
   }catch(e){ console.warn('org lookup failed',e); }
   if(!ME.orgId) toast(t('no-team-yet'),true);
+  track('session_start',{lang:LANG, viewport:isDesktop()?'desktop':'phone'});   // Q5 retention + desktop/phone split
 }
 async function doLogout(){
   if(dirty&&!confirm(t('confirm-logout')))return;
