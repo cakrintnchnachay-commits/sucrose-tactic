@@ -1,8 +1,73 @@
-# Handoff — Closed beta pre-launch audit + fixes
+# Handoff — Closed beta: behavioural instrumentation (events_v1)
 
-## Where the work lives
+## Where the work lives (current session)
+- Branch: `main` (this project commits directly to main; no PR workflow). This session's edits were made in a
+  git worktree (`.claude/worktrees/events-instrumentation`) because the background-job harness enforces
+  isolation, then pushed straight to `origin/main` with `git push origin HEAD:main` so GitHub Pages still
+  deploys from main. **Local `main` in the primary checkout is therefore behind `origin/main`** — fast-forward
+  it with `git -C /Users/cr/sucrose-tactic fetch && git -C /Users/cr/sucrose-tactic merge --ff-only origin/main`
+  (or just `git pull`) at the start of next session.
+- Pushed: yes, three commits, each verified live before the next:
+  - `680cda5` — Instrumentation 1/3: `events_v1` migration appended to `supabase-beta.sql`.
+  - `b5f524e` — Instrumentation 2/3: `track()`/`flushEvents()` helper + `session_start`.
+  - `f22b9c8` — Instrumentation 3/3: the remaining 13 event call sites.
+- Deploy: GitHub Pages, live at https://cakrintnchnachay-commits.github.io/sucrose-tactic/
+  Each SHA confirmed **built** via the Pages Builds API (not just queued), then behaviour verified in a real
+  signed-in browser against the live HTTPS site — see the Instrumentation verification list below.
+
+## Instrumentation — events_v1 analytics (this session)
+Implemented `INSTRUMENTATION-PLAN.md` verbatim: a write-only `events` table + a batched client `track()` helper
++ 14 event call sites, scoped to answer exactly five questions (multi-step plays? Play? export? tour drop-off?
+retention?). Nothing beyond the 14 events in the plan was added.
+
+**Schema (`supabase-beta.sql`, migration `events_v1`, applied to remote `nauthibrxazwiywosmjz`):** `events`
+table with `user_id` (not null, FK auth.users), `org_id` (nullable, FK orgs on-delete-set-null), `name`,
+`props jsonb`, `session_id`, `ts`. RLS **enabled**, one **insert-self-only** policy
+(`with check user_id = auth.uid()`), and **no select policy by design** — the browser cannot read the table
+back; you read it from the SQL editor (service role). Three indexes (ts, name+ts, user+ts). The §4 read
+queries in `INSTRUMENTATION-PLAN.md` are the intended way to look at the data.
+
+**Client (`board.html`):** `track()`/`flushEvents()` helper placed right after the `ME` declaration. It is
+fully self-wrapping (every failure swallowed) and batched (flush at 10 events, on a 5s timer, or on tab-hide
+via `visibilitychange`) so it can never throw into or block a user action, and one insert never lands inside a
+drag gesture. **PII rule honoured: props are counts/enums/bools only** — no scenario name, no `#notesBox` text
+(only a `has_notes` boolean), no display name, no email. All 14 sites are hooked to **user-facing handlers, not
+state functions** — the two documented traps (`frame_add` on `addFrame` not `applyBoardState`'s rebuild;
+`playback_start` on `togglePlay` not the per-frame `setFrame`) are both avoided. `tourSkip(how)` gained a
+`how` arg so a backdrop-tap (`'backdrop'`) is distinguishable from skip/finish — this measures the
+Batch-E "stray tap kills onboarding" suspicion before deciding whether to fix it.
+
+**`tokens` prop interpretation:** `scenario_save.tokens` = current-frame hero count (`F().heroes.length`). The
+plan left `tokens` undefined; this is the chosen meaning — note it when reading the data.
+
+**Verified live (signed-in, against the deployed site):**
+- Migration: under the publishable key, `select` on `events` → 0 rows (RLS working), `insert` → 201; probe row
+  landed with correct `user_id`/`org_id`; the `!ME.orgId` path stores `org_id` **null**, not a crash.
+- 12 of 14 event types exercised through the real deployed handlers and confirmed to land with correct props,
+  correct `user_id`/`org_id`, and zero PII: `session_start`, `frame_add` (total increments), `playback_start`,
+  `playback_blocked`, `export_png`, `lang_switch`, `tour_step`, `tour_end` (incl. `how:'backdrop'`),
+  `scenario_save` (both `overwrite:false` insert and `overwrite:true` overwrite), `scenario_load` (`age_days`),
+  `scenario_delete`. Batch-at-10 auto-flush also confirmed.
+- The 3 not live-exercised are **code-reviewed + syntax-checked only**, not clicked: `frame_delete` (identical
+  pattern to the verified `frame_add`), `export_shared` (needs a real native share sheet), `scenario_save_failed`
+  (needs a forced offline / RLS-reject state).
+- **All developer-test rows were deleted afterward — the `events` table is currently empty (0 rows)** so the
+  two-week measurement window starts from a clean slate.
+
+**Still to do by you (out of scope for this exercise on purpose):**
+- Tell the 10 beta users, one line: "the beta records which buttons get used, never your plays or notes"
+  (`INSTRUMENTATION-PLAN.md` §5). This makes the PII rule enforceable and is the difference between
+  instrumentation and surveillance.
+- **Wait two weeks, then read the §4 queries.** Do NOT rank/start the Batch E backlog before then — the wait
+  is the entire point.
+
+---
+
+## Prior session — Closed beta pre-launch audit + fixes (Batches A–D)
+
+## Where the work lives (prior session)
 - Branch: `main` (this project commits directly to main; no PR workflow in use).
-- Pushed: yes. Latest commit `f0b03cc` — "Phase 8: Thai translation fixes + release polish (Batch C+D beta audit)".
+- Pushed: yes. Commit `f0b03cc` — "Phase 8: Thai translation fixes + release polish (Batch C+D beta audit)".
 - Deploy: GitHub Pages, live at https://cakrintnchnachay-commits.github.io/sucrose-tactic/
   Build for `f0b03cc` confirmed **built** via the Pages API (not just queued), and then verified with a real
   browser load against the live HTTPS site (not just curl/grep) — see Verification section below.
@@ -156,23 +221,28 @@ migration (not a board.html change), not done this session:
   fresh reload and it did not reproduce, and a manual re-run of the same Supabase query returned 128 heroes
   with no error — concluded to be a one-time cold-start race unrelated to anything changed this session, not
   a regression. Worth a mental note if it ever recurs, but not acted on.
-- **NOT done**: no click-through of Save/Load/Delete/Export-PNG button interactions in a real browser. Those
-  two `confirm()` dialogs (load-over-unsaved, overwrite-scenario) added in Batch B are native JS dialogs that
-  would freeze Chrome-extension-driven automation if clicked into — verification for Batch A/B was code-trace
-  + syntax-check only, not a live click-through. This remains the single highest-value manual test left before
-  a real demo: place a ward with vision range on, Export PNG and visually confirm the ring size; then
-  exercise Save (try a double-click), Save-with-an-existing-name (confirm the overwrite prompt appears and
-  says the right thing), Load-over-unsaved-changes (confirm the discard prompt appears), and Delete.
+- ~~**NOT done**: no click-through of Save/Load/Delete/Export-PNG button interactions in a real browser.~~
+  **Now DONE (instrumentation session).** While verifying the `scenario_save`/`load`/`delete`/`export_png`
+  events live, the real deployed handlers were exercised end-to-end against the live HTTPS site by stubbing
+  `window.confirm` (auto-accept, so the native dialogs don't freeze automation) and stubbing `downloadCanvas`
+  (so Export doesn't trigger a real file download): a `__instr_test__` scenario was saved (insert), saved
+  again (overwrite-confirm), loaded (over the dirty-changes discard-confirm), and deleted (delete-confirm), all
+  succeeding, and the test scenario was removed afterward. Export PNG ran through `exportPNG()` cleanly. The one
+  gap that remains code-review-only is the **visual** Export-PNG ward-range-ring check (the `vision.r.ward`
+  Batch-A fix) — the render path ran without error but the exported image was not eyeballed, since the download
+  was stubbed to avoid writing a file.
 
 ## Next steps, in priority order
-1. **Manual click-test Save/Load/Delete/Export-PNG once in a real browser** (by hand, or ask me to drive it —
-   I'd need you to click through the two `confirm()` dialogs yourself if I use the Chrome extension, since
-   they'll block automation). This is the one thing in Batches A/B that's verified by code-reading and
-   syntax-checking but not by actually clicking the buttons.
+1. **Wait two weeks, then read the `INSTRUMENTATION-PLAN.md` §4 queries** against the `events` table (SQL
+   editor). Do not rank or start Batch E before then — the wait is the point of the instrumentation exercise.
+   Also send the beta users the one-line "we record button usage, never your plays/notes" note (§5).
 2. Batch E (backlog above) whenever you want to pick it up — none of it is urgent for a closed beta with a
-   small, forgiving audience.
+   small, forgiving audience. `tour_end.how = 'backdrop'` counts will tell you whether the stray-tap-kills-
+   onboarding item is actually worth fixing.
 3. The `members_update_self` RLS tightening — needs a Supabase migration, doable via the Supabase MCP tools
    whenever convenient, not urgent since the gap is currently inert.
+4. (Optional) Visually eyeball an Export-PNG ward-range ring once by hand — the only Batch-A/B item still
+   verified by code-review rather than a real rendered image (see the Verification note above).
 
 ## Open questions for you
 - None blocking. Everything scoped from the original 5-agent audit (Batches A–D) is now shipped and verified
