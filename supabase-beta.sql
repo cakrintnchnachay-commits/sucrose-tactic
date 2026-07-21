@@ -206,3 +206,34 @@ begin
 end $$;
 -- Admin-only: not callable through the API.
 revoke execute on function public.admin_onboard(text, text) from public, anon, authenticated;
+
+-- ── Behavioural analytics (events) ─────────────────────────────────
+-- Migration: events_v1. Write-only client analytics for the closed beta —
+-- answers "who builds multi-step plays / presses Play / exports / finishes
+-- the tour / comes back" without ever storing a scenario name, note, hero
+-- comp, display name, or email. props holds scalars and enums only; the
+-- PII rule lives at the client call sites (board.html track()), not here.
+create table events (
+  id         bigserial primary key,
+  user_id    uuid not null references auth.users (id) on delete cascade,
+  org_id     uuid references orgs (id) on delete set null,   -- null for a user with no org yet
+  name       text not null,
+  props      jsonb not null default '{}',
+  session_id text,
+  ts         timestamptz not null default now()
+);
+
+alter table events enable row level security;
+
+-- INSERT-only, self only: a member may write rows as themselves and nothing
+-- else. There is deliberately NO select policy — the browser has no reason to
+-- read analytics back, so neither the anon nor authenticated key can; you read
+-- this table from the SQL editor (service role). This also caps a leaked
+-- publishable key to writing noise, never exfiltrating behavioural data.
+create policy events_insert_self on events
+  for insert to authenticated
+  with check (user_id = auth.uid());
+
+create index events_ts_idx      on events (ts desc);
+create index events_name_ts_idx on events (name, ts desc);
+create index events_user_ts_idx on events (user_id, ts desc);
