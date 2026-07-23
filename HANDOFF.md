@@ -1,6 +1,103 @@
-# Handoff — Closed beta: behavioural instrumentation (events_v1)
+# Handoff — Closed beta: 3-day data read + product-strategy discussion
 
-## Where the work lives (current session)
+## Where the work lives (current session — 2026-07-23)
+- **No code changes this session.** This was a data-analysis + product-strategy session; the only file written
+  is this `HANDOFF.md`. Nothing to deploy.
+- Branch/deploy unchanged from the instrumentation session: `origin/main` holds the four instrumentation commits
+  (`680cda5` → `1b10715`). Local `main` in the primary checkout is still behind — `git pull` there next session.
+  Edits were made in worktree `.claude/worktrees/events-instrumentation` and pushed to `origin/main`.
+- **The `events` table now holds REAL beta data — do NOT wipe it.** (Last session it was reset to 0 for a clean
+  window; as of this read it has ~42 real rows from 7 users. Leave it alone.)
+
+## The data after 3 days (read 2026-07-23; ~20 invited users)
+Raw pull from the `events` table via the SQL editor (service role). n is tiny — directional only, ~2 actual
+data-days. Coaching intuition outranks these numbers at this n.
+- **42 events, 7 distinct users of ~20** → ~13 invited users never opened the board at all (no `session_start`).
+- **3 of the 7 fired only `session_start`** — opened and bounced → **~4 genuinely active users.**
+- **Q1 (multi-step?):** Yes but shallow. 4 users added a 2nd frame; only 2 reached 3 frames; **max depth = 3.**
+- **Q2 (Play?):** Yes — the hero feature. 3 users, 7 `playback_start`. One user hit `playback_blocked` 3×
+  (pressed Play on a single frame — wanted animation, didn't know to add a step first).
+- **Q3 (export?):** **Zero.** No `export_png`/`export_shared` from anyone.
+- **Q4 (tour drop-off?):** None — it completes. 3 users hit steps 1→2→3, ended mostly `finished`, one `skipped`,
+  **zero `backdrop`.** The Batch-E "stray tap kills onboarding" suspicion is NOT appearing.
+- **Q5 (return?):** No day-2 returns yet (every user `active_days=1`); only one possible return day → inconclusive.
+- **Dead events across the board:** `scenario_save`, `scenario_load`, `scenario_delete`, `export_png`,
+  `lang_switch`, `frame_delete` — all zero.
+- **Cross-check:** the `scenarios` table has NOT grown since launch (most recent save 07-21, pre-launch), so
+  "nobody saves" is real behaviour, not an instrumentation gap — which also validates the instrumentation.
+- **Platform/lang:** ~63% desktop sessions, **100% Thai, zero `lang_switch`** — the EN path is unused so far.
+
+## Product-strategy analysis (to discuss next session)
+Coach's own read, all supported by the data: (a) useful but not an everyday tool; (b) a link is harder to use
+than a real app; (c) some coaches use it to *look* professional rather than to *be* professional; (d) only 2–3
+of 20 gave verbal feedback despite being asked.
+
+**Central thesis — the tool is hired for a different job than it was built for.**
+- *Used* features (build shallow multi-step → Play) belong to a **"communicate a play right now"** paradigm.
+- *Dead* features (save / load / tags / export / language) belong to a **"maintain a durable playbook"** paradigm.
+- It was built as the second; it's used as the first. This one mismatch explains nearly every finding. The one
+  genuinely differentiated capability — **animated multi-step playback** — is exactly what users found on their own.
+
+**Fundamental design critique.** The entire persistence layer (per-team saved scenarios, RLS isolation, load
+manager, tags, PNG export) assumes a shared team playbook nobody is building — over-built relative to demand.
+Actual use is presentational and ephemeral: assemble a quick animated play, show it live (likely screen-shared in
+a team talk / Line call), move on. Static PNG export throws away the animation — probably *why* export is dead:
+it exports the wrong artifact.
+
+**The three coach reads, sharpened:**
+1. *Not everyday* → correct; it's an **episodic** tool. Stop chasing DAU; aim to be "the default tool at the
+   moment of need." Metric = used-per-prep-session, not daily.
+2. *Link ≠ app* → real, and the cheapest high-leverage fix. A link wins trial but loses retention (no home-screen
+   presence, not where coaches live: Line / Discord / in-game). A **PWA** (installable, offline, native-feeling)
+   resolves it; the single-file build is well-positioned for it. Distribution problem, not a feature gap.
+3. *Look pro vs be pro* → **flip it into the strategy.** Vanity is a legitimate growth engine. The problem is the
+   pro-looking moment **never leaves the app** (0 exports) → zero word-of-mouth. **The referral loop is broken at
+   the export step.**
+
+**Highest-leverage single change (hypothesis):** replace static PNG export with a **one-tap, branded, animated
+share** (looping GIF / short clip of the playback) pushed to Line. It (a) serves the real job, (b) closes the
+referral loop — a slick animated rotation in a team chat gets seen by players / other coaches → "what tool made
+that?" — and (c) converts vanity into distribution. A subtle "made with [board]" mark makes every share a
+marketing surface. Target loop: build → play → **share something worth posting** → someone asks → new coach.
+
+**Sequencing discipline (important):** only ~4 active users. Do NOT build a growth/virality engine on a leaky
+bucket. Order: (1) **understand the people** — talk to the 4 active users AND, more importantly, the ~13 who
+never opened it (invisible in the data, the most valuable interviews); (2) make build→play→share undeniable for
+the few; (3) THEN open the referral loop / PWA / growth.
+
+**Feedback method fix (the 2–3 responders problem):** broadcast "feedback is valued" selects for nobody. Instead:
+(a) go 1:1 with behaviorally-specific questions the data now enables ("I saw you built a 3-step play and hit Play
+twice — did you show your team? what stopped you saving it?"); (b) interview the non-openers; (c) add ONE
+in-context 👍/👎 right after playback; (d) weight behavior over words — the instrument is already built, trust it
+over the quiet inbox.
+
+**Tension to resolve next session:** this argues AGAINST the original plan's "wait two weeks, then rank the
+Batch E backlog." **Batch E is polish on a product whose core loop isn't proven.** If this framing holds, the
+next step is conversations + a possible pivot toward the communicate/share job — not the Batch E commits.
+
+## Next steps (for the discussion session)
+1. **Decide the framing** (this gates everything else): is the job "communicate a play fast" (lean in: playback +
+   animated branded share + PWA) or "team playbook" (fix discoverability of save/load)? The data leans hard toward
+   the former.
+2. **Talk to people before building:** 2–3 active users + 2–3 non-openers, with the specific questions above.
+   Highest-value action, zero code.
+3. **If framing = communicate/share:** scope the animated-share-to-Line export + a subtle brand mark, and the PWA
+   install — these attack link≠app and the broken referral loop directly.
+4. **Re-decide Batch E:** likely defer/deprioritize vs the core-loop work above. One micro-item worth keeping: the
+   `playback_blocked` user (Play with 1 frame gives a toast but no path forward) — a real onboarding gap, n=1.
+5. **Reframe the north-star metric:** "did a coach share a play?" as the leading indicator of both value and growth.
+
+## Open questions / decisions pending
+- Communicate-job vs playbook-job framing (next-step 1) — the pivot decision.
+- Invest in PWA + animated share now, or wait for more users first?
+- Keep waiting the original two weeks for more data, or act on 1:1 conversations sooner? (The analysis says
+  conversations > more low-n data right now.)
+
+---
+
+## Previous session — behavioural instrumentation (events_v1)
+
+## Where the work lives (instrumentation session)
 - Branch: `main` (this project commits directly to main; no PR workflow). This session's edits were made in a
   git worktree (`.claude/worktrees/events-instrumentation`) because the background-job harness enforces
   isolation, then pushed straight to `origin/main` with `git push origin HEAD:main` so GitHub Pages still
